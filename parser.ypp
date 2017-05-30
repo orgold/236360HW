@@ -1,0 +1,59 @@
+%{
+	#include <iostream>
+	#include <stdlib.h>
+
+	using namespace std;
+
+	extern int yylex();
+	int yyerror(char * message);
+%}
+
+
+
+
+
+
+
+
+
+%left OR;
+%left AND;
+%left BINOP2;
+%left BINOP1;
+%right NOT;
+
+
+%nonassoc LPAREN;
+%nonassoc RPAREN;
+%nonassoc VOID;
+%nonassoc INT;
+%nonassoc BYTE;
+%nonassoc B;
+%nonassoc 	 BOOL;
+%nonassoc TRUE FALSE;
+
+%nonassoc NUM;
+%%
+exp : exp BINOP1 exp {cout<<"exp BINOP1 exp"<<endl;}
+| exp BINOP2 exp	{cout<<"exp BINOP2 exp"<<endl;}
+| NUM {cout<<"num"<<endl;}
+| LPAREN exp RPAREN {cout<<"LPAREN exp RPAREN"<<endl;}
+| NOT exp	{cout<<"NOT exp"<<endl;}
+| exp AND exp {cout<<"exp AND exp"<<endl;}
+| exp OR exp {cout<<"exp OR exp"<<endl;}
+| TRUE	{cout<<"TRUE"<<endl;}
+| FALSE {cout<<"FALSE"<<endl;}
+
+
+%%
+
+int main()
+{
+	yyparse();
+}
+
+int yyerror(char * message)
+{
+	cout<<"Parse error: "<<message<<endl;
+	exit(0);
+}
