@@ -8,14 +8,6 @@
 	int yyerror(char * message);
 %}
 
-
-
-
-
-
-
-
-
 %left OR;
 %left AND;
 %left RELOP2;
@@ -25,58 +17,127 @@
 %right NOT;
 
 
-
+%token SC;
+%token COLON;
+%token ASSIGN;
+%token RETURN;
+%token BREAK;
+%token LBRACE;
+%token RBRACE;
+%token IF;
+%token ELSE;
+%token WHILE;
+%token SWITCH;
+%token CASE;
 %nonassoc LPAREN;
 %nonassoc RPAREN;
 %nonassoc COMMA;
 %nonassoc VOID;
 %nonassoc INT;
 %nonassoc BYTE;
-%nonassoc 	 BOOL;
+%nonassoc BOOL;
 %nonassoc TRUE FALSE;
 %nonassoc ID;
 
 %nonassoc STRING;
 %nonassoc NUM;
 %nonassoc B;
+
+
 %%
 
 
-fundecl : rettype ID LPAREN formals RPAREN {cout<<"rettype ID LPAREN formals RPAREN"<<endl;}
-exp : exp BINOP1 exp {cout<<"exp BINOP1 exp"<<endl;}
-| exp BINOP2 exp	{cout<<"exp BINOP2 exp"<<endl;}
-| NUM {cout<<"num"<<endl;}
-| LPAREN exp RPAREN {cout<<"LPAREN exp RPAREN"<<endl;}
-| NOT exp	{cout<<"NOT exp"<<endl;}
-| exp AND exp {cout<<"exp AND exp"<<endl;}
-| exp OR exp {cout<<"exp OR exp"<<endl;}
-| TRUE	{cout<<"TRUE"<<endl;}
-| FALSE {cout<<"FALSE"<<endl;}
-| exp RELOP1 exp {cout<<"exp RELOP1 exp"<<endl;}
-| exp RELOP2 exp {cout<<"exp RELOP2 exp"<<endl;}
-| STRING {cout<<"STRING"<<endl;}
-| ID {cout<<"ID"<<endl;}
-| NUM B {cout<<"NUM B"<<endl;}
-| call {cout<<"call"<<endl;}
+program : funcs 			{cout<<"program -> funcs"<<endl;}
 
-call : ID LPAREN RPAREN {cout<<"ID LPAREN RPAREN"<<endl;}
-	| ID LPAREN explist RPAREN {cout<<"ID LPAREN explist RPAREN"<<endl;}
+funcs 
+	: 						{cout<<"funcs -> eps"<<endl;}
+	| fundecl funcs 		{cout<<"funcs -> fundecl funcs"<<endl;}
 
-explist : exp {cout<<"exp"<<endl;}
-	| exp COMMA explist  {cout<<"exp COMMA explist"<<endl;}
+statements
+	: statement				{cout<<"statements -> statement"<<endl;}
+	| statements statement 	{cout<<"statements -> statements statement"<<endl;}
 
-type : INT {cout<<"type -> INT"<<endl;}
-	 | BYTE {cout<<"BYTE"<<endl;}
-	 | BOOL {cout<<"BOOL"<<endl;}
+statement
+	: openstatement			{cout<<"statement -> openstatement"<<endl;}
+	| closedstatement		{cout<<"statement -> closedstatement"<<endl;}
 
-formals : {{cout<<"eps"<<endl;}}
-	 | formalslist {cout<<"formalslist"<<endl;}
-formalslist	 : formaldecl {cout<<"formaldecl"<<endl;}
-	 | formaldecl COMMA formalslist {cout<<"formaldecl COMMA formalslist"<<endl;}
-formaldecl : type ID 	 {cout<<"formaldecl -> type ID "<<endl;}
+openstatement
+	: IF LPAREN exp RPAREN statement							{cout<<"openstatement -> IF LPAREN exp RPAREN statement"<<endl;}
+	| IF LPAREN exp RPAREN closedstatement ELSE openstatement	{cout<<"openstatement -> IF LPAREN exp RPAREN closedstatement ELSE openstatement"<<endl;}
+	| WHILE LPAREN exp RPAREN openstatement						{cout<<"openstatement -> WHILE LPAREN exp RPAREN openstatement"<<endl;}
 
-rettype : type {cout<<"rettype -> type  "<<endl;}
-		| VOID {cout<<"VOID"<<endl;}
+closedstatement
+	: simplestatement 											{cout<<"closedstatement -> simplestatement"<<endl;}
+	| IF LPAREN exp RPAREN closedstatement ELSE closedstatement	{cout<<"closedstatement -> IF LPAREN exp RPAREN closedstatement ELSE closedstatement"<<endl;}
+	| WHILE LPAREN exp RPAREN closedstatement					{cout<<"closedstatement -> WHILE LPAREN exp RPAREN closedstatement"<<endl;}
+	| SWITCH LPAREN exp RPAREN LBRACE caselist RBRACE SC		{cout<<"closedstatement -> SWITCH LPAREN exp RPAREN LBRACE caselist RBRACE SC"<<endl;}
+
+caselist
+	: casestat									{cout<<"caselist -> casestat"<<endl;}
+	| casestat caselist							{cout<<"caselist -> casestat caselist"<<endl;}
+
+casestat
+	: CASE NUM COLON statement BREAK SC 		{cout<<"casestat -> CASE NUM COLON statement BREAK SC"<<endl;}
+	| CASE NUM B COLON statement BREAK SC 		{cout<<"casestat -> CASE NUM B COLON statement BREAK SC"<<endl;}
+
+simplestatement 
+	: type ID SC				{cout<<"simplestatement -> type ID SC"<<endl;}
+	| type ID ASSIGN exp SC 	{cout<<"simplestatement -> type ID ASSIGN exp SC"<<endl;}
+	| ID ASSIGN exp SC 			{cout<<"simplestatement -> ID ASSIGN exp SC"<<endl;}
+	| call SC 					{cout<<"simplestatement -> call SC"<<endl;}
+	| RETURN SC 				{cout<<"simplestatement -> RETURN SC"<<endl;}
+	| RETURN exp SC				{cout<<"simplestatement -> RETURN exp SC"<<endl;}
+	| BREAK SC 					{cout<<"simplestatement -> BREAK SC"<<endl;}
+	| LBRACE statements RBRACE 	{cout<<"simplestatement -> { statements }"<<endl;}
+
+	
+
+fundecl 
+	: rettype ID LPAREN formals RPAREN LBRACE statements RBRACE		{cout<<"fundecl -> rettype ID LPAREN formals RPAREN"<<endl;}
+
+exp 
+	: exp BINOP1 exp 			{cout<<"exp -> exp BINOP1 exp"<<endl;}
+	| exp BINOP2 exp			{cout<<"exp -> exp BINOP2 exp"<<endl;}
+	| NUM 						{cout<<"exp -> num"<<endl;}
+	| LPAREN exp RPAREN 		{cout<<"exp -> LPAREN exp RPAREN"<<endl;}
+	| NOT exp					{cout<<"exp -> NOT exp"<<endl;}
+	| exp AND exp 				{cout<<"exp -> exp AND exp"<<endl;}
+	| exp OR exp 				{cout<<"exp -> exp OR exp"<<endl;}
+	| TRUE						{cout<<"exp -> TRUE"<<endl;}
+	| FALSE 					{cout<<"exp -> FALSE"<<endl;}
+	| exp RELOP1 exp 			{cout<<"exp -> exp RELOP1 exp"<<endl;}
+	| exp RELOP2 exp 			{cout<<"exp -> exp RELOP2 exp"<<endl;}
+	| STRING 					{cout<<"exp -> STRING"<<endl;}
+	| ID 						{cout<<"exp -> ID"<<endl;}
+	| NUM B 					{cout<<"exp -> NUM B"<<endl;}
+	| call 						{cout<<"exp -> call"<<endl;}
+
+call 
+	: ID LPAREN RPAREN 			{cout<<"exp -> ID LPAREN RPAREN"<<endl;}
+	| ID LPAREN explist RPAREN 	{cout<<"exp -> ID LPAREN explist RPAREN"<<endl;}
+
+explist 
+	: exp 						{cout<<"explist -> exp"<<endl;}
+	| exp COMMA explist  		{cout<<"explist -> exp COMMA explist"<<endl;}
+
+type 
+	: INT 						{cout<<"type -> INT"<<endl;}
+	| BYTE 						{cout<<"type -> BYTE"<<endl;}
+	| BOOL 						{cout<<"type -> BOOL"<<endl;}
+
+formals 
+	: 							{cout<<"formals -> eps"<<endl;}
+	| formalslist 				{cout<<"formals -> formalslist"<<endl;}
+
+formalslist	
+	: formaldecl 					{cout<<"formalslist -> formaldecl"<<endl;}
+	| formaldecl COMMA formalslist 	{cout<<"formalslist -> formaldecl COMMA formalslist"<<endl;}
+
+formaldecl : type ID 			{cout<<"formaldecl -> type ID "<<endl;}
+
+rettype 
+	: type 						{cout<<"rettype -> type  "<<endl;}
+	| VOID 						{cout<<"rettype -> VOID"<<endl;}
 %%
 
 int main()
