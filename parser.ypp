@@ -18,22 +18,31 @@
 
 %left OR;
 %left AND;
+%left RELOP2;
+%left RELOP1;
 %left BINOP2;
 %left BINOP1;
 %right NOT;
 
 
+
 %nonassoc LPAREN;
 %nonassoc RPAREN;
+%nonassoc COMMA;
 %nonassoc VOID;
 %nonassoc INT;
 %nonassoc BYTE;
-%nonassoc B;
 %nonassoc 	 BOOL;
 %nonassoc TRUE FALSE;
+%nonassoc ID;
 
+%nonassoc STRING;
 %nonassoc NUM;
+%nonassoc B;
 %%
+
+
+fundecl : rettype ID LPAREN formals RPAREN {cout<<"rettype ID LPAREN formals RPAREN"<<endl;}
 exp : exp BINOP1 exp {cout<<"exp BINOP1 exp"<<endl;}
 | exp BINOP2 exp	{cout<<"exp BINOP2 exp"<<endl;}
 | NUM {cout<<"num"<<endl;}
@@ -43,8 +52,31 @@ exp : exp BINOP1 exp {cout<<"exp BINOP1 exp"<<endl;}
 | exp OR exp {cout<<"exp OR exp"<<endl;}
 | TRUE	{cout<<"TRUE"<<endl;}
 | FALSE {cout<<"FALSE"<<endl;}
+| exp RELOP1 exp {cout<<"exp RELOP1 exp"<<endl;}
+| exp RELOP2 exp {cout<<"exp RELOP2 exp"<<endl;}
+| STRING {cout<<"STRING"<<endl;}
+| ID {cout<<"ID"<<endl;}
+| NUM B {cout<<"NUM B"<<endl;}
+| call {cout<<"call"<<endl;}
 
+call : ID LPAREN RPAREN {cout<<"ID LPAREN RPAREN"<<endl;}
+	| ID LPAREN explist RPAREN {cout<<"ID LPAREN explist RPAREN"<<endl;}
 
+explist : exp {cout<<"exp"<<endl;}
+	| exp COMMA explist  {cout<<"exp COMMA explist"<<endl;}
+
+type : INT {cout<<"type -> INT"<<endl;}
+	 | BYTE {cout<<"BYTE"<<endl;}
+	 | BOOL {cout<<"BOOL"<<endl;}
+
+formals : {{cout<<"eps"<<endl;}}
+	 | formalslist {cout<<"formalslist"<<endl;}
+formalslist	 : formaldecl {cout<<"formaldecl"<<endl;}
+	 | formaldecl COMMA formalslist {cout<<"formaldecl COMMA formalslist"<<endl;}
+formaldecl : type ID 	 {cout<<"formaldecl -> type ID "<<endl;}
+
+rettype : type {cout<<"rettype -> type  "<<endl;}
+		| VOID {cout<<"VOID"<<endl;}
 %%
 
 int main()
