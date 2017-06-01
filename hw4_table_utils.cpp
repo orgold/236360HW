@@ -6,8 +6,8 @@ void SymbolTable::insertFunction(
 	TYPE retType,
 	const vector<string>& paramNames)
 {
-	if (functionMap.find(name) != functionMap.end())
-		throw AlreadyDefinedException(name);
+	checkNameNotDefinedAsFunction(name);
+	
 	FunctionData funcData(retType,paramTypes);
 	functionMap[name] = funcData;
 	insertScope();
@@ -29,3 +29,32 @@ void SymbolTable::insertScope()
 	scopeStack.push_back(ScopeTable(currentOffset));
 }
 
+void SymbolTable::removeScope()
+{
+	assert(scopeStack.size() != 0);
+	scopeStack.pop_back();
+}
+
+void SymbolTable::insertVar(const string& name, TYPE type)
+{
+	//check that it won't shadow
+	checkNameNotDefinedAsFunction(name);
+	checkNameNotDefinedAsVar(name);
+	assert(scopeStack.size() != 0);
+	scopeStack.back().insertVar(name, type);
+}
+
+void SymbolTable::checkNameNotDefinedAsFunction(const string& name)
+{
+	if (functionMap.find(name) != functionMap.end())
+		throw AlreadyDefinedException(name);
+}
+
+void SymbolTable::checkNameNotDefinedAsVar(const string& name)
+{
+	for(auto& sTable : scopeStack)
+	{
+		if(sTable->isVarInScope(name))
+			throw AlreadyDefinedException(name);
+	}
+}
