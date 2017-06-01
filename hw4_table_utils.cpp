@@ -1,5 +1,5 @@
 #include "hw4_table_utils.h"
-#include <assert.h>
+
 void SymbolTable::insertFunction(
 	const string& name,
 	const vector<TYPE>& paramTypes,
@@ -8,12 +8,14 @@ void SymbolTable::insertFunction(
 {
 	checkNameNotDefinedAsFunction(name);
 	
-	FunctionData funcData(retType,paramTypes);
+	FunctionData funcData={retType,paramTypes};
 	functionMap[name] = funcData;
 	insertScope();
 	for(int i = 0; i < paramTypes.size(); i++ ){
-		if (functionMap.find(paramNames[i]) != functionMap.end())
+		if (functionMap.find(paramNames[i]) != functionMap.end()){
+			std::cout<< paramNames[i] << "thrown for funcName" << std::endl;
 			throw AlreadyDefinedException(paramNames[i]);
+		}
 		scopeStack.back().insertParam(
 			paramNames[i],
 			paramTypes[i],
@@ -52,9 +54,42 @@ void SymbolTable::checkNameNotDefinedAsFunction(const string& name)
 
 void SymbolTable::checkNameNotDefinedAsVar(const string& name)
 {
-	for(auto& sTable : scopeStack)
+	for(auto sTable = scopeStack.begin() ; sTable!= scopeStack.end();sTable++)
 	{
 		if(sTable->isVarInScope(name))
 			throw AlreadyDefinedException(name);
 	}
+}
+SymbolTable::SymbolTable()
+{
+
+	functionMap["print"] = {VOID,{STRING}};
+	functionMap["printi"] = {VOID,{INT}};
+}
+
+int main()
+{
+	try {
+	SymbolTable st;
+	st.print();
+	vector<TYPE> vecParmList ={INT,BOOL,BYTE};
+	vector <string> vecStrList={"i","boo","byt"};
+	st.insertFunction("foo",vecParmList,INT,vecStrList);
+	st.insertVar("x",INT);
+	
+	st.insertScope();
+	st.insertVar("y",INT);
+	st.insertVar("z",INT);
+	st.removeScope();
+	st.insertVar("y",INT);
+	st.removeScope();
+	st.insertFunction("foo2",vecParmList,INT,vecStrList);
+	st.insertVar("x",INT);
+	st.print();
+
+}
+catch(AlreadyDefinedException & e)
+{
+	std::cout<<"exe!!!!!!! for "<<e.id<<std::endl;
+}
 }
