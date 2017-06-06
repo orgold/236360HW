@@ -10,6 +10,7 @@ void SymbolTable::insertFunction(
 	
 	FunctionData funcData={retType,paramTypes};
 	functionMap[name] = funcData;
+	funcsByOrderArrival.push_back(name);
 	insertScope();
 	for(int i = 0; i < paramTypes.size(); i++ ){
 		if (functionMap.find(paramNames[i]) != functionMap.end()){
@@ -34,6 +35,8 @@ void SymbolTable::insertScope()
 void SymbolTable::removeScope()
 {
 	assert(scopeStack.size() != 0);
+	endScope();
+	scopeStack.back().sendToPrint();
 	scopeStack.pop_back();
 }
 
@@ -54,7 +57,7 @@ void SymbolTable::checkNameNotDefinedAsFunction(const string& name)
 
 void SymbolTable::checkNameNotDefinedAsVar(const string& name)
 {
-	for(auto sTable = scopeStack.begin() ; sTable!= scopeStack.end();sTable++)
+	for(std::vector<ScopeTable>::iterator sTable = scopeStack.begin() ; sTable!= scopeStack.end();sTable++)
 	{
 		if(sTable->isVarInScope(name))
 			throw AlreadyDefinedException(name);
@@ -62,16 +65,36 @@ void SymbolTable::checkNameNotDefinedAsVar(const string& name)
 }
 SymbolTable::SymbolTable()
 {
-
 	functionMap["print"] = {VOID,{STRING}};
 	functionMap["printi"] = {VOID,{INT}};
+}
+SymbolTable::~SymbolTable()
+{
+	
+	
+	for (std::vector<string>::iterator ite=funcsByOrderArrival.begin();ite!=funcsByOrderArrival.end();ite++)
+	{
+		vector<const char*> arrangeForPrint(functionMap[*ite].paramTypeList.size());
+		std::transform(
+			functionMap[*ite].paramTypeList.begin(),
+			functionMap[*ite].paramTypeList.end(),
+			arrangeForPrint.begin(),
+			sendToPrint
+		);
+		printID(
+			ite->c_str(),
+			0,
+			(makeFunctionType(functionMap[*ite].returnType,arrangeForPrint)).c_str()
+		);
+	}
+		
 }
 
 int main()
 {
 	try {
 	SymbolTable st;
-	st.print();
+	
 	vector<TYPE> vecParmList ={INT,BOOL,BYTE};
 	vector <string> vecStrList={"i","boo","byt"};
 	st.insertFunction("foo",vecParmList,INT,vecStrList);
@@ -85,7 +108,7 @@ int main()
 	st.removeScope();
 	st.insertFunction("foo2",vecParmList,INT,vecStrList);
 	st.insertVar("x",INT);
-	st.print();
+	
 
 }
 catch(AlreadyDefinedException & e)

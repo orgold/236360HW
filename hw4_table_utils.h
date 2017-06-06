@@ -1,34 +1,28 @@
 #include <iostream>
-#include <vector>
-using std::vector;
-#include <string>
+#include "output.hpp"
 #include <map>
 #include <exception>
 #include <assert.h>
+using std::vector;
 using std::string;
+using  namespace output;
 enum TYPE {INT, BOOL, BYTE, VOID, STRING};
 
-#ifdef DEBUG
-void print_TYPE(TYPE type){
+const char* print_TYPE(TYPE type){
 	switch(type){
 		case(INT):
-			std::cout << "int";
-			break;
+			return "INT";
 		case(BOOL):
-			std::cout << "bool";
-			break;
+			return "BOOL";
 		case(BYTE):
-			std::cout << "byte";
-			break;
+			return "BYTE";
 		case(STRING):
-			std::cout << "string";
-			break;
+			return  "STRING";
 		case(VOID):
-			std::cout << "void";
-			break;
+			return "VOID";
 	}
 }
-#endif //DEBUG
+
 
 class AlreadyDefinedException  
 {
@@ -39,13 +33,13 @@ public:
 
 struct VarEntryData
 {
-	
 	TYPE type;
 	int position;
 };
 
 class ScopeTable
 {
+	std::vector<string> orderIdsByArrival; 
 	std::map<string,VarEntryData> nameToData;
 	int currentOffset;
 	
@@ -53,13 +47,14 @@ class ScopeTable
 public:
 	ScopeTable(int currentOffset) : currentOffset(currentOffset) {}
 	ScopeTable(const ScopeTable& st) : 
-		nameToData(st.nameToData), currentOffset (st.currentOffset) {}
+		orderIdsByArrival(st.orderIdsByArrival),nameToData(st.nameToData), currentOffset (st.currentOffset) {}
 	bool isVarInScope(const string& name)
 	{
 		return nameToData.find(name) != nameToData.end(); 
 	}
 	void insertVar(const string& name, TYPE type)
 	{
+		orderIdsByArrival.push_back(name);
 		VarEntryData data = {type, currentOffset++};
 		nameToData[name] = data;
 	}
@@ -67,12 +62,18 @@ public:
 	{
 		if(nameToData.find(name) != nameToData.end())
 			throw AlreadyDefinedException(name);
+		orderIdsByArrival.push_back(name);
 		VarEntryData data = {type, position};///d
 		nameToData[name] = data;
 	}
 	int getCurrentOffset()
 	{
 		return currentOffset;
+	}
+	void sendToPrint()
+	{
+		for(std::vector<string>::iterator ite = orderIdsByArrival.begin(); ite != orderIdsByArrival.end() ; ite++)
+			printID(ite->c_str(),nameToData[*ite].position,print_TYPE(nameToData[*ite].type));
 	}
 #ifdef DEBUG
 	void print()
@@ -81,7 +82,7 @@ public:
 		std::cout << "\tnameToData: " << std::endl;
 		for( auto itr = nameToData.begin(); itr != nameToData.end(); itr++){
 			std::cout <<"\t\tName:" << itr->first << ", ";
-			std::cout << "Type: "; print_TYPE(itr->second.type);
+			std::cout << "Type: " + print_TYPE(itr->second.type);
 			std::cout << "Position: " << itr->second.position;
 			std::cout << std:: endl;
 		}
@@ -100,6 +101,7 @@ class SymbolTable
 {
 	vector<ScopeTable> scopeStack;
 	std::map<string,FunctionData> functionMap;
+	std::vector<string> funcsByOrderArrival;
 	void checkNameNotDefinedAsVar(const string& name);
 	void checkNameNotDefinedAsFunction(const string& name);
 public:
