@@ -6,6 +6,8 @@
 
 	extern int yylex();
 	int yyerror(char * message);
+	SymbolTable symbolTable();
+
 %}
 
 %left OR;
@@ -87,7 +89,10 @@ simplestatement
 	| call SC 					{cout<<"simplestatement -> call SC"<<endl;}
 	| RETURN SC 				{cout<<"simplestatement -> RETURN SC"<<endl;}
 	| RETURN exp SC				{cout<<"simplestatement -> RETURN exp SC"<<endl;}
-	| BREAK SC 					{cout<<"simplestatement -> BREAK SC"<<endl;}
+	| BREAK SC 					{	
+									$$.hasBreak=true;
+									cout<<"simplestatement -> BREAK SC"<<endl;
+								}
 	| LBRACE statements RBRACE 	{cout<<"simplestatement -> { statements }"<<endl;}
 
 	
@@ -103,13 +108,35 @@ exp
 	| NOT exp					{cout<<"exp -> NOT exp"<<endl;}
 	| exp AND exp 				{cout<<"exp -> exp AND exp"<<endl;}
 	| exp OR exp 				{cout<<"exp -> exp OR exp"<<endl;}
-	| TRUE						{cout<<"exp -> TRUE"<<endl;}
-	| FALSE 					{cout<<"exp -> FALSE"<<endl;}
+	| TRUE						{
+								$$.type=BOOL;
+								$$.lineno = $1.lineno;
+								cout<<"exp -> TRUE"<<endl;
+								}
+	| FALSE 					{
+								$$.type=BOOL;
+								$$.lineno = $1.lineno;
+								cout<<"exp -> FALSE"<<endl;
+								}
 	| exp RELOP1 exp 			{cout<<"exp -> exp RELOP1 exp"<<endl;}
 	| exp RELOP2 exp 			{cout<<"exp -> exp RELOP2 exp"<<endl;}
 	| STRING 					{cout<<"exp -> STRING"<<endl;}
-	| ID 						{cout<<"exp -> ID"<<endl;}
-	| NUM B 					{cout<<"exp -> NUM B"<<endl;}
+	| ID 						{
+								try{
+								$$.lineno = $1.lineno;
+								$$.type=symbolTable.getType($1.idName);
+								}
+								catch (errorUndefException& e)
+								{
+									errorUndef($$.lineno,e.id.c_str()); 
+								}
+								
+								cout<<"exp -> ID"<<endl;
+								}
+	| NUM B 					{
+								if ($1.value>255)  errorByteTooLarge(,)
+								cout<<"exp -> NUM B"<<endl;
+								}
 	| call 						{cout<<"exp -> call"<<endl;}
 
 call 

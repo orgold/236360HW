@@ -22,14 +22,31 @@ const char* print_TYPE(TYPE type){
 			return "VOID";
 	}
 }
-
-
+	struct newYystype 
+	{
+		int hasBreak;
+		TYPE type;
+		TYPE* typeList;
+		int value;
+		char * idName;
+		int lineno;
+	};
+typedef struct newYystype  yystype;
 class AlreadyDefinedException  
 {
 public:
 	string id;
 	AlreadyDefinedException(const string &id) :id(id){}
 };
+
+class errorUndefException  
+{
+public:
+	string id;
+	errorUndefException(const string &id) :id(id){}
+	errorUndefException(){};
+};
+
 
 struct VarEntryData
 {
@@ -75,6 +92,10 @@ public:
 		for(std::vector<string>::iterator ite = orderIdsByArrival.begin(); ite != orderIdsByArrival.end() ; ite++)
 			printID(ite->c_str(),nameToData[*ite].position,print_TYPE(nameToData[*ite].type));
 	}
+	Type getType (string name)
+	{
+		return nameToData[name].type;
+	}
 #ifdef DEBUG
 	void print()
 	{
@@ -111,7 +132,7 @@ public:
 	void removeScope();
 	void insertVar(const string& name, TYPE type);
 	//getPosition(name);
-	//getType(name);
+	TYPE getType(name);
 	
 #ifdef DEBUG
 	void print()

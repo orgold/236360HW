@@ -9,41 +9,138 @@
 %option noyywrap
 
 
-%%
-"true" 				return TRUE;
-"false"				return FALSE;
-"void" 				return VOID;
-"int" 				return INT;
-"byte" 				return BYTE;
-"b" 				return B;
-"bool" 				return BOOL;
-"and" 				return AND;
-"or" 				return OR;
-"not" 				return NOT;
-","					return COMMA;
-":"					return COLON;
-";"					return SC;
-"="					return ASSIGN;
-"return"			return RETURN;
-"break"				return BREAK;
-"if"				return IF;
-"else"				return ELSE;
-"while"				return WHILE;
-"switch"			return SWITCH;
-"case"				return CASE;
-[+-] 				return BINOP2;
-[*/]				return BINOP1;
-0|[1-9][0-9]* 		return NUM;
-\(					return LPAREN;
-\)					return RPAREN;
-\{					return LBRACE;
-\}					return RBRACE;
+%%					
+"true" 				{
+					yylval.lineno=yylineno;
+					return TRUE;
+					}
+
+"false"				{
+					yylval.lineno=yylineno;
+					return FALSE;
+					}
+"void" 				{
+					yylval.lineno=yylineno;
+					return VOID;
+					}
+"int" 				{
+					yylval.lineno=yylineno;
+					return INT;
+					}
+"byte" 				{
+					yylval.lineno=yylineno;
+					return BYTE;
+					}
+"b" 				{
+					yylval.lineno=yylineno;
+					return B;
+					}
+"bool" 				 {
+					yylval.lineno=yylineno;
+					return BOOL;
+					}
+"and" 				 {
+					yylval.lineno=yylineno;
+					return AND;
+					}
+"or" 				 {
+					yylval.lineno=yylineno;
+					return OR;
+					}
+"not" 				 {
+					yylval.lineno=yylineno;
+					return NOT;
+					}
+","					 {
+					yylval.lineno=yylineno;
+					return COMMA;
+					}
+":"					{
+					yylval.lineno=yylineno;
+					return COLON;
+					}
+";"					{
+					yylval.lineno=yylineno;
+					return SC;
+					}
+"="					{
+					yylval.lineno=yylineno;
+					return ASSIGN;
+					}
+"return"			{
+					yylval.lineno=yylineno;
+					return RETURN;
+					}
+"break"				{
+					yylval.lineno=yylineno;
+					return BREAK;
+					}
+"if"				{
+					yylval.lineno=yylineno;
+					return IF;
+					}
+"else"				{
+					yylval.lineno=yylineno;
+					return ELSE;
+					}
+"while"				{
+					yylval.lineno=yylineno;
+					return WHILE;
+					}
+"switch"			{
+					yylval.lineno=yylineno;
+					return SWITCH;
+					}
+"case"				{
+					yylval.lineno=yylineno;
+					return CASE;
+					}
+[+-] 				{
+					yylval.lineno=yylineno;
+					return BINOP2;
+					}
+[*/]				{
+					yylval.lineno=yylineno;
+					return BINOP1;
+					}
+0|[1-9][0-9]* 		{	
+						yylval.lineno =yylineno;
+						yylval.value = atoi(yytext);
+						return NUM;
+					}
+\(					{
+					yylval.lineno=yylineno;
+					return LPAREN;
+					}
+\)					{
+					yylval.lineno=yylineno;
+					return RPAREN;
+					}
+\{					{
+					yylval.lineno=yylineno;
+					return LBRACE;
+					}
+\}					{
+					yylval.lineno=yylineno;
+					return RBRACE;
+					}
 [ \t\n\r]			;
-"=="|"!="			return RELOP2;
-"<"|">"|"<="|">="	return RELOP1;
-[a-zA-Z][a-zA-Z0-9]* return ID;
+"=="|"!="			{
+					yylval.lineno=yylineno;
+					return RELOP2;
+					}
+"<"|">"|"<="|">="	{
+					yylval.lineno=yylineno;
+					return RELOP1;
+					}
+[a-zA-Z][a-zA-Z0-9]* {
+					yylval.idName=malloc(strlen(yytext));
+					strcpy(yylval.idName,yytext);
+					yylval.lineno=yylineno;
+					return ID;
+					}
 \"([^\n\r\"\\]|\\[rnt"\\])+\" return STRING;
-.					printf("Error: can't match %s\n", yytext);
+.					errorLex(yylineno);
 
 %%
 

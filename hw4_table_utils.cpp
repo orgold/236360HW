@@ -68,6 +68,15 @@ SymbolTable::SymbolTable()
 	functionMap["print"] = {VOID,{STRING}};
 	functionMap["printi"] = {VOID,{INT}};
 }
+TYPE SymbolTable::getType(string name,TYPE& typi)
+{
+	for(std::vector<ScopeTable>::iterator sTable = scopeStack.begin() ; sTable!= scopeStack.end();sTable++)
+	{
+		if(sTable->isVarInScope(name))
+			return sTable->getType(name);
+	}
+	throw errorUndefException(name);
+}
 SymbolTable::~SymbolTable()
 {
 	
