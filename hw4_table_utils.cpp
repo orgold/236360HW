@@ -117,6 +117,7 @@ TYPE SymbolTable::checkFuncTypeAndArgs(string id, TYPE* typeList,int size)
 	}
 	return savedFuncData.returnType;
 }
+
 SymbolTable::~SymbolTable()
 {
 	

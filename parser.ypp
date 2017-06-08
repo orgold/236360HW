@@ -7,6 +7,7 @@
 	extern int yylex();
 	int yyerror(char * message);
 	SymbolTable symbolTable;
+	TYPE globalFunctionRetType;
 
 %}
 
@@ -49,7 +50,20 @@
 %%
 
 
-program : funcs 			{cout<<"program -> funcs"<<endl;}
+program : funcs 			{
+								try{
+									TYPE typeTemp = symbolTable.checkFuncTypeAndArgs("main", nullptr,0);
+								}
+								catch (errorUndefFuncException& e){
+									errorMainMissing();
+									exit(1);
+								}
+								if (typeTemp != VOID_T){
+									errorMainMissing();
+									exit(1);
+								}
+								cout<<"program -> funcs"<<endl;
+							}
 
 funcs 
 	: 						{cout<<"funcs -> eps"<<endl;}
@@ -75,12 +89,23 @@ closedstatement
 	| SWITCH LPAREN exp RPAREN LBRACE caselist RBRACE SC		{cout<<"closedstatement -> SWITCH LPAREN exp RPAREN LBRACE caselist RBRACE SC"<<endl;}
 
 caselist
-	: casestat									{cout<<"caselist -> casestat"<<endl;}
-	| casestat caselist							{cout<<"caselist -> casestat caselist"<<endl;}
+	: casestat					{
+									cout<<"caselist -> casestat"<<endl;
+								}
+	| casestat caselist			{
+
+									cout<<"caselist -> casestat caselist"<<endl;
+								}
 
 casestat
-	: CASE NUM COLON statement BREAK SC 		{cout<<"casestat -> CASE NUM COLON statement BREAK SC"<<endl;}
-	| CASE NUM B COLON statement BREAK SC 		{cout<<"casestat -> CASE NUM B COLON statement BREAK SC"<<endl;}
+	: CASE NUM COLON statement BREAK SC 		{
+													$$.type = $4.type;
+													cout<<"casestat -> CASE NUM COLON statement BREAK SC"<<endl;
+												}
+	| CASE NUM B COLON statement BREAK SC 		{
+													$$.type = $5.type;
+													cout<<"casestat -> CASE NUM B COLON statement BREAK SC"<<endl;
+												}
 
 simplestatement 
 	: type ID SC				{
@@ -94,49 +119,76 @@ simplestatement
 								}
 								free($2.idName);
 								$$.lineno = $2.lineno;
+								$$.hasBreak =0;
 								cout<<"simplestatement -> type ID SC"<<endl;}
 	| type ID ASSIGN exp SC 	{
-								try{
-								insertVar($2.idName,$1.type);
-								}
-								catch(errorDefException e)
-								{
-									errorDef($2.lineno,e.id.c_str());
-									exit(1);
-								}
-								if($1.type!= $4.type && !($1.type==INT_T&&$4.type==BYTE_T)) 
-								{
-									errorMismatch($2.lineno);
-								exit(1);
-								}
-								free($2.idName);
-								$$.lineno = $2.lineno;
-									cout<<"simplestatement -> type ID ASSIGN exp SC"<<endl;}
-	| ID ASSIGN exp SC 			{
-								try{
-								TYPE tempType=symbolTable.getType($1.idName);
-								if(tempType!= $3.type && !(tempType==INT_T&&$3.type==BYTE_T)) 
-								{
-									errorMismatch($2.lineno);
-								exit(1);
-								}
-								}
-								catch(errorUndefException& e)
-								{
-										errorUndef($1.lineno,$1.idName);
+									try{
+										insertVar($2.idName,$1.type);
+									}
+									catch(errorDefException e)
+									{
+										errorDef($2.lineno,e.id.c_str());
 										exit(1);
+									}
+									if($1.type!= $4.type && !($1.type==INT_T&&$4.type==BYTE_T)) 
+									{
+										errorMismatch($2.lineno);
+										exit(1);
+									}
+									free($2.idName);
+									$$.lineno = $2.lineno;
+									$$.hasBreak =0;
+									cout<<"simplestatement -> type ID ASSIGN exp SC"<<endl;
 								}
-								
-		
-								cout<<"simplestatement -> ID ASSIGN exp SC"<<endl;}
-	| call SC 					{cout<<"simplestatement -> call SC"<<endl;}
-	| RETURN SC 				{cout<<"simplestatement -> RETURN SC"<<endl;}
-	| RETURN exp SC				{cout<<"simplestatement -> RETURN exp SC"<<endl;}
+	| ID ASSIGN exp SC 			{
+									try{
+										TYPE tempType=symbolTable.getType($1.idName);
+										if(tempType!= $3.type && !(tempType==INT_T&&$3.type==BYTE_T)) 
+										{
+											errorMismatch($2.lineno);
+											exit(1);
+										}
+									}
+									catch(errorUndefException& e)
+									{
+											errorUndef($1.lineno,$1.idName);
+											exit(1);
+									}
+									$$.hasBreak =0;
+									cout<<"simplestatement -> ID ASSIGN exp SC"<<endl;
+								}
+	| call SC 					{
+									$$.hasBreak =0;
+									cout<<"simplestatement -> call SC"<<endl;
+								}
+	| RETURN SC 				{
+									if(globalFunctionRetType != VOID_T) 
+									{
+										errorMismatch($1.lineno);
+										exit(1);
+									}
+									$$.type = VOID_T;
+									$$.hasBreak =0;
+									cout<<"simplestatement -> RETURN SC"<<endl;
+								}
+	| RETURN exp SC				{
+									if(globalFunctionRetType != $2.type && !(globalFunctionRetType ==INT_T &&$2.type == BYTE_T ) )
+									{
+										errorMismatch($1.lineno);
+										exit(1);
+									}
+									$$.type = $2.type;
+									$$.hasBreak =0;
+									cout<<"simplestatement -> RETURN exp SC"<<endl;
+								}
 	| BREAK SC 					{	
-									$$.hasBreak=true;
+									$$.hasBreak = true;
 									cout<<"simplestatement -> BREAK SC"<<endl;
 								}
-	| LBRACE statements RBRACE 	{cout<<"simplestatement -> { statements }"<<endl;}
+	| LBRACE statements RBRACE 	{
+									$$.hasBreak = $2.hasBreak;
+									cout<<"simplestatement -> { statements }"<<endl;
+								}
 
 	
 
@@ -153,9 +205,12 @@ fundecl_helper
 											errorDef($2.lineno,$2.idName);
 											exit(1);
 										}
+										globalFunctionRetType = $1.type;
 										$$.type=$1.type;
 										free($2.idName);
 										free($4.typeList);
+										for(int i = 0; i < $4.typeListSize ; i++)
+											free($4.idList[i]);
 										free($4.idList);
 									}
 exp 
@@ -368,14 +423,40 @@ type
 								cout<<"type -> BOOL"<<endl;}
 
 formals 
-	: 							{cout<<"formals -> eps"<<endl;}
-	| formalslist 				{cout<<"formals -> formalslist"<<endl;}
+	: 							{
+									$$.typeListSize = 0;
+									cout<<"formals -> eps"<<endl;
+								}
+	| formalslist 				{
+									$$.typeList = $1.typeList;
+									$$.typeListSize = $1.typeListSize;
+									$$.idList = $1.idList;
+									cout<<"formals -> formalslist"<<endl;
+								}
 
 formalslist	
-	: formaldecl 					{cout<<"formalslist -> formaldecl"<<endl;}
-	| formaldecl COMMA formalslist 	{cout<<"formalslist -> formaldecl COMMA formalslist"<<endl;}
+	: formaldecl 					{
+										$$.typeList = (TYPE*) malloc(sizeof(TYPE));
+										$$.typeListSize = 1;
+										$$.typeList[0] = $1.type;
+										$$.idList = (char**) malloc(sizeof(char*));
+										$$.idList[0] = $1.idName;
+										cout<<"formalslist -> formaldecl"<<endl;
+									}
+	| formaldecl COMMA formalslist 	{
+										$$.typeList = (TYPE*) realloc($3.typeList, sizeof(TYPE)*($3.typeListSize + 1));
+										$$.typeListSize = $3.typeListSize + 1;
+										$$.typeList[$3.typeListSize] = $1.type;
+										$$.idList = (char**) realloc($3.idList, sizeof(char*)*($3.typeListSize + 1));
+										$$.idList[$3.typeListSize] = $1.idName;
+										cout<<"formalslist -> formaldecl COMMA formalslist"<<endl;
+									}
 
-formaldecl : type ID 			{cout<<"formaldecl -> type ID "<<endl;}
+formaldecl : type ID 			{
+									$$.type = $1.type;
+									$$.idName = $2.idName;
+									cout<<"formaldecl -> type ID "<<endl;
+								}
 
 rettype 
 	: type 						{

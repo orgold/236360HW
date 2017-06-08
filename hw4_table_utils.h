@@ -24,6 +24,7 @@ struct newYystype
 	char* value;
 	char * idName;
 	int lineno;
+	int seenReturn;
 };
 typedef struct newYystype  YYSTYPE;
 #define YYSTYPE_IS_DECLARED = 1
