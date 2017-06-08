@@ -1,5 +1,5 @@
 #include "hw4_table_utils.h"
-#include <algorithm>
+
 
 const char* toCString(TYPE type)
 {
@@ -32,7 +32,7 @@ void SymbolTable::insertFunction(
 	for(int i = 0; i < paramTypes.size(); i++ ){
 		if (functionMap.find(paramNames[i]) != functionMap.end()){
 			std::cout<< paramNames[i] << "thrown for funcName" << std::endl;
-			throw AlreadyDefinedException(paramNames[i]);
+			throw errorDefException(paramNames[i]);
 		}
 		scopeStack.back().insertParam(
 			paramNames[i],
@@ -69,7 +69,7 @@ void SymbolTable::insertVar(const string& name, TYPE type)
 void SymbolTable::checkNameNotDefinedAsFunction(const string& name)
 {
 	if (functionMap.find(name) != functionMap.end())
-		throw AlreadyDefinedException(name);
+		throw errorDefException(name);
 }
 
 void SymbolTable::checkNameNotDefinedAsVar(const string& name)
@@ -77,7 +77,7 @@ void SymbolTable::checkNameNotDefinedAsVar(const string& name)
 	for(std::vector<ScopeTable>::iterator sTable = scopeStack.begin() ; sTable!= scopeStack.end();sTable++)
 	{
 		if(sTable->isVarInScope(name))
-			throw AlreadyDefinedException(name);
+			throw errorDefException(name);
 	}
 }
 SymbolTable::SymbolTable()
@@ -103,6 +103,20 @@ TYPE SymbolTable::getType(string name)
 	}
 	throw errorUndefException(name);
 }
+
+
+TYPE SymbolTable::checkFuncTypeAndArgs(string id, TYPE* typeList,int size)
+{
+	if(functionMap.find(id)==functionMap.end()) throw errorUndefFuncException(id);
+	FunctionData savedFuncData = functionMap[id];
+	if(size != savedFuncData.paramTypeList.size())  throw errorPrototypeMismatchException(id,savedFuncData.paramTypeList);
+	for(int i=0;i<size;i++)
+	{
+		if(typeList[i]!=savedFuncData.paramTypeList[size - 1- i]) 
+			throw errorPrototypeMismatchException(id,savedFuncData.paramTypeList);
+	}
+	return savedFuncData.returnType;
+}
 SymbolTable::~SymbolTable()
 {
 	
@@ -124,6 +138,18 @@ SymbolTable::~SymbolTable()
 	}
 		
 }
+
+void SymbolTable::coverInsertFunction(const string& name,TYPE* typeList,int paramNum, TYPE retType, char** paramNames)
+{
+	vector<TYPE> types;
+	vector<string> names;
+	for(int i=paramNum ; i >0; i--){
+		types.push_back(typeList[i-1]);
+		names.push_back(paramNames[i-1]);
+	}
+	insertFunction(name,types,retType, names);
+}
+
 /*
 int main()
 {

@@ -6,6 +6,7 @@
 #include <map>
 #include <exception>
 #include <assert.h>
+#include <algorithm>
 using std::vector;
 using std::string;
 using  namespace output;
@@ -18,6 +19,8 @@ struct newYystype
 	int hasBreak;
 	TYPE type;
 	TYPE* typeList;
+	char** idList;
+	int typeListSize;
 	char* value;
 	char * idName;
 	int lineno;
@@ -25,11 +28,11 @@ struct newYystype
 typedef struct newYystype  YYSTYPE;
 #define YYSTYPE_IS_DECLARED = 1
 
-class AlreadyDefinedException  
+class errorDefException  
 {
 public:
 	string id;
-	AlreadyDefinedException(const string &id) :id(id){}
+	errorDefException(const string &id) :id(id){}
 };
 
 class errorUndefException  
@@ -40,6 +43,32 @@ public:
 	errorUndefException(){};
 };
 
+class errorUndefFuncException  
+{
+public:
+	string id;
+	errorUndefFuncException(const string &id) :id(id){}
+	errorUndefFuncException(){};
+};
+
+class errorPrototypeMismatchException  
+{
+public:
+	string id;
+	vector<const char*> argTypes;
+	
+	errorPrototypeMismatchException(const string &id,const vector<TYPE>& typesVector) :id(id),
+	argTypes(vector<const char*>(typesVector.size()))
+	{
+		std::transform(
+			typesVector.begin(),
+			typesVector.end(),
+			argTypes.begin(),
+			toCString
+		);
+	}
+	errorPrototypeMismatchException(){};
+};
 
 struct VarEntryData
 {
@@ -71,7 +100,7 @@ public:
 	void insertParam(const string& name, TYPE type, int position)
 	{
 		if(nameToData.find(name) != nameToData.end())
-			throw AlreadyDefinedException(name);
+			throw errorDefException(name);
 		orderIdsByArrival.push_back(name);
 		VarEntryData data = {type, position};///d
 		nameToData[name] = data;
@@ -118,13 +147,15 @@ class SymbolTable
 	std::vector<string> funcsByOrderArrival;
 	void checkNameNotDefinedAsVar(const string& name);
 	void checkNameNotDefinedAsFunction(const string& name);
+	void insertFunction(const string& name,const vector<TYPE>& paramList,TYPE retType,const vector<string>& paramNames);
 public:
 	SymbolTable();
 	~SymbolTable();
-	void insertFunction(const string& name,const vector<TYPE>& paramList,TYPE retType,const vector<string>& paramNames);
+	void coverInsertFunction(const string& name,TYPE* typeList,int paramNum, TYPE retType, char** paramNames);
 	void insertScope();
 	void removeScope();
 	void insertVar(const string& name, TYPE type);
+	TYPE checkFuncTypeAndArgs(string, TYPE*,int);
 	//getPosition(name);
 	TYPE getType(string name);
 	
