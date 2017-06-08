@@ -1,7 +1,10 @@
 %{
 /* Declarations section */
 #include <stdio.h>
+#include "hw4_table_utils.h"
 #include "parser.tab.hpp"
+
+int handle_default();
 
 %}
 
@@ -10,137 +13,118 @@
 
 
 %%					
-"true" 				{
-					yylval.lineno=yylineno;
-					return TRUE;
-					}
-
-"false"				{
-					yylval.lineno=yylineno;
-					return FALSE;
-					}
-"void" 				{
-					yylval.lineno=yylineno;
-					return VOID;
-					}
-"int" 				{
-					yylval.lineno=yylineno;
-					return INT;
-					}
-"byte" 				{
-					yylval.lineno=yylineno;
-					return BYTE;
-					}
-"b" 				{
-					yylval.lineno=yylineno;
-					return B;
-					}
-"bool" 				 {
-					yylval.lineno=yylineno;
-					return BOOL;
-					}
-"and" 				 {
-					yylval.lineno=yylineno;
-					return AND;
-					}
-"or" 				 {
-					yylval.lineno=yylineno;
-					return OR;
-					}
-"not" 				 {
-					yylval.lineno=yylineno;
-					return NOT;
-					}
-","					 {
-					yylval.lineno=yylineno;
-					return COMMA;
-					}
-":"					{
-					yylval.lineno=yylineno;
-					return COLON;
-					}
-";"					{
-					yylval.lineno=yylineno;
-					return SC;
-					}
-"="					{
-					yylval.lineno=yylineno;
-					return ASSIGN;
-					}
-"return"			{
-					yylval.lineno=yylineno;
-					return RETURN;
-					}
-"break"				{
-					yylval.lineno=yylineno;
-					return BREAK;
-					}
-"if"				{
-					yylval.lineno=yylineno;
-					return IF;
-					}
-"else"				{
-					yylval.lineno=yylineno;
-					return ELSE;
-					}
-"while"				{
-					yylval.lineno=yylineno;
-					return WHILE;
-					}
-"switch"			{
-					yylval.lineno=yylineno;
-					return SWITCH;
-					}
-"case"				{
-					yylval.lineno=yylineno;
-					return CASE;
-					}
+"true" 				return handle_default();
+"false"				return handle_default();
+"void" 				return handle_default();
+"int" 				return handle_default();
+"byte" 				return handle_default();
+"b" 				return handle_default();
+"bool" 				return handle_default();
+"and" 				return handle_default();
+"or" 				return handle_default();
+"not" 				return handle_default();
+","					return handle_default();
+":"					return handle_default();
+";"					return handle_default();
+"="					return handle_default();
+"return"			return handle_default();
+"break"				return handle_default();
+"if"				return handle_default();
+"else"				return handle_default();
+"while"				return handle_default();
+"switch"			return handle_default();
+"case"				return handle_default();
 [+-] 				{
-					yylval.lineno=yylineno;
-					return BINOP2;
+						yylval.lineno=yylineno;
+						return BINOP2;
 					}
 [*/]				{
-					yylval.lineno=yylineno;
-					return BINOP1;
+						yylval.lineno=yylineno;
+						return BINOP1;
 					}
 0|[1-9][0-9]* 		{	
 						yylval.lineno =yylineno;
-						yylval.value = atoi(yytext);
+						yylval.value=(char*)malloc(strlen(yytext));
+						strcpy(yylval.value,yytext);
 						return NUM;
 					}
-\(					{
-					yylval.lineno=yylineno;
-					return LPAREN;
-					}
-\)					{
-					yylval.lineno=yylineno;
-					return RPAREN;
-					}
-\{					{
-					yylval.lineno=yylineno;
-					return LBRACE;
-					}
-\}					{
-					yylval.lineno=yylineno;
-					return RBRACE;
-					}
+\(					return handle_default();
+\)					return handle_default();
+\{					return handle_default();
+\}					return handle_default();
 [ \t\n\r]			;
 "=="|"!="			{
-					yylval.lineno=yylineno;
-					return RELOP2;
+						yylval.lineno=yylineno;
+						return RELOP2;
 					}
 "<"|">"|"<="|">="	{
-					yylval.lineno=yylineno;
-					return RELOP1;
+						yylval.lineno=yylineno;
+						return RELOP1;
 					}
 [a-zA-Z][a-zA-Z0-9]* {
-					yylval.idName=malloc(strlen(yytext));
-					strcpy(yylval.idName,yytext);
-					yylval.lineno=yylineno;
-					return ID;
+						yylval.idName=(char*)malloc(strlen(yytext));
+						strcpy(yylval.idName,yytext);
+						yylval.lineno=yylineno;
+						return ID;
 					}
 \"([^\n\r\"\\]|\\[rnt"\\])+\" return STRING;
 .					errorLex(yylineno);
 
 %%
-
+int handle_default()
+{
+	//default behavior
+	yylval.lineno=yylineno;
+	
+	//different returned tokens
+	if(0==strcmp(yytext,"true"))
+		return TRUE;
+	if(0==strcmp(yytext,"false"))
+		return FALSE;
+	if(0==strcmp(yytext,"void"))
+		return VOID;
+	if(0==strcmp(yytext,"int"))
+		return INT;
+	if(0==strcmp(yytext,"byte"))
+		return BYTE;
+	if(0==strcmp(yytext,"b"))
+		return B;
+	if(0==strcmp(yytext,"bool"))
+		return BOOL;
+	if(0==strcmp(yytext,"and"))
+		return AND;
+	if(0==strcmp(yytext,"or"))
+		return OR;
+	if(0==strcmp(yytext,"not"))
+		return NOT;
+	if(0==strcmp(yytext,","))
+		return COMMA;
+	if(0==strcmp(yytext,":"))
+		return COLON;
+	if(0==strcmp(yytext,";"))
+		return SC;
+	if(0==strcmp(yytext,"="))
+		return ASSIGN;
+	if(0==strcmp(yytext,"return"))
+		return RETURN;
+	if(0==strcmp(yytext,"break"))
+		return BREAK;
+	if(0==strcmp(yytext,"if"))
+		return IF;
+	if(0==strcmp(yytext,"else"))
+		return ELSE;
+	if(0==strcmp(yytext,"while"))
+		return WHILE;
+	if(0==strcmp(yytext,"switch"))
+		return SWITCH;
+	if(0==strcmp(yytext,"case"))
+		return CASE;
+	if(0==strcmp(yytext,"("))
+		return LPAREN;
+	if(0==strcmp(yytext,")"))
+		return RPAREN;
+	if(0==strcmp(yytext,"{"))
+		return LBRACE;
+	if(0==strcmp(yytext,"}"))
+		return RBRACE;
+}

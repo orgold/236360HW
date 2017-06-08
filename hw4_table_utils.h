@@ -1,3 +1,6 @@
+#ifndef _hw4_table_utils_h
+#define _hw4_table_utils_h
+
 #include <iostream>
 #include "output.hpp"
 #include <map>
@@ -6,32 +9,22 @@
 using std::vector;
 using std::string;
 using  namespace output;
-enum TYPE {INT, BOOL, BYTE, VOID, STRING};
+enum TYPE {INT_T, BOOL_T, BYTE_T, VOID_T, STRING_T};
 
-const char* print_TYPE(TYPE type){
-	switch(type){
-		case(INT):
-			return "INT";
-		case(BOOL):
-			return "BOOL";
-		case(BYTE):
-			return "BYTE";
-		case(STRING):
-			return  "STRING";
-		case(VOID):
-			return "VOID";
-	}
-}
-	struct newYystype 
-	{
-		int hasBreak;
-		TYPE type;
-		TYPE* typeList;
-		int value;
-		char * idName;
-		int lineno;
-	};
-typedef struct newYystype  yystype;
+const char* toCString(TYPE type);
+
+struct newYystype 
+{
+	int hasBreak;
+	TYPE type;
+	TYPE* typeList;
+	char* value;
+	char * idName;
+	int lineno;
+};
+typedef struct newYystype  YYSTYPE;
+#define YYSTYPE_IS_DECLARED = 1
+
 class AlreadyDefinedException  
 {
 public:
@@ -90,9 +83,9 @@ public:
 	void sendToPrint()
 	{
 		for(std::vector<string>::iterator ite = orderIdsByArrival.begin(); ite != orderIdsByArrival.end() ; ite++)
-			printID(ite->c_str(),nameToData[*ite].position,print_TYPE(nameToData[*ite].type));
+			printID(ite->c_str(),nameToData[*ite].position,toCString(nameToData[*ite].type));
 	}
-	Type getType (string name)
+	TYPE getType (string name)
 	{
 		return nameToData[name].type;
 	}
@@ -127,12 +120,13 @@ class SymbolTable
 	void checkNameNotDefinedAsFunction(const string& name);
 public:
 	SymbolTable();
+	~SymbolTable();
 	void insertFunction(const string& name,const vector<TYPE>& paramList,TYPE retType,const vector<string>& paramNames);
 	void insertScope();
 	void removeScope();
 	void insertVar(const string& name, TYPE type);
 	//getPosition(name);
-	TYPE getType(name);
+	TYPE getType(string name);
 	
 #ifdef DEBUG
 	void print()
@@ -157,3 +151,4 @@ public:
 	}
 #endif //DEBUG
 };
+#endif //_hw4_table_utils_h

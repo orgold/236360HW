@@ -1,4 +1,21 @@
 #include "hw4_table_utils.h"
+#include <algorithm>
+
+const char* toCString(TYPE type)
+{
+	switch(type){
+		case(INT_T):
+			return "INT";
+		case(BOOL_T):
+			return "BOOL";
+		case(BYTE_T):
+			return "BYTE";
+		case(STRING_T):
+			return  "STRING";
+		case(VOID_T):
+			return "VOID";
+	}
+}
 
 void SymbolTable::insertFunction(
 	const string& name,
@@ -65,10 +82,19 @@ void SymbolTable::checkNameNotDefinedAsVar(const string& name)
 }
 SymbolTable::SymbolTable()
 {
-	functionMap["print"] = {VOID,{STRING}};
-	functionMap["printi"] = {VOID,{INT}};
+	struct FunctionData fooData;
+	//add print
+	fooData.returnType = VOID_T;
+	fooData.paramTypeList.push_back(STRING_T);
+	
+	functionMap["print"] = fooData;
+	
+	//add printi
+	fooData.paramTypeList.push_back(INT_T);
+	functionMap["printi"] = fooData;
 }
-TYPE SymbolTable::getType(string name,TYPE& typi)
+
+TYPE SymbolTable::getType(string name)
 {
 	for(std::vector<ScopeTable>::iterator sTable = scopeStack.begin() ; sTable!= scopeStack.end();sTable++)
 	{
@@ -88,40 +114,41 @@ SymbolTable::~SymbolTable()
 			functionMap[*ite].paramTypeList.begin(),
 			functionMap[*ite].paramTypeList.end(),
 			arrangeForPrint.begin(),
-			sendToPrint
+			toCString
 		);
 		printID(
 			ite->c_str(),
 			0,
-			(makeFunctionType(functionMap[*ite].returnType,arrangeForPrint)).c_str()
+			(makeFunctionType(toCString(functionMap[*ite].returnType),arrangeForPrint)).c_str()
 		);
 	}
 		
 }
-
+/*
 int main()
 {
 	try {
-	SymbolTable st;
-	
-	vector<TYPE> vecParmList ={INT,BOOL,BYTE};
-	vector <string> vecStrList={"i","boo","byt"};
-	st.insertFunction("foo",vecParmList,INT,vecStrList);
-	st.insertVar("x",INT);
-	
-	st.insertScope();
-	st.insertVar("y",INT);
-	st.insertVar("z",INT);
-	st.removeScope();
-	st.insertVar("y",INT);
-	st.removeScope();
-	st.insertFunction("foo2",vecParmList,INT,vecStrList);
-	st.insertVar("x",INT);
-	
+		SymbolTable st;
+		
+		vector<TYPE> vecParmList ={INT_T,BOOL_T,BYTE_T};
+		vector <string> vecStrList={"i","boo","byt"};
+		st.insertFunction("foo",vecParmList,INT_T,vecStrList);
+		st.insertVar("x",INT_T);
+		
+		st.insertScope();
+		st.insertVar("y",INT_T);
+		st.insertVar("z",INT_T);
+		st.removeScope();
+		st.insertVar("y",INT_T);
+		st.removeScope();
+		st.insertFunction("foo2",vecParmList,INT_T,vecStrList);
+		st.insertVar("x",INT_T);
+		
 
+	}
+	catch(AlreadyDefinedException & e)
+	{
+		std::cout<<"exe!!!!!!! for "<<e.id<<std::endl;
+	}
 }
-catch(AlreadyDefinedException & e)
-{
-	std::cout<<"exe!!!!!!! for "<<e.id<<std::endl;
-}
-}
+*/

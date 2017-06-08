@@ -1,12 +1,12 @@
 %{
 	#include <iostream>
 	#include <stdlib.h>
-
+	#include "hw4_table_utils.h"
 	using namespace std;
 
 	extern int yylex();
 	int yyerror(char * message);
-	SymbolTable symbolTable();
+	SymbolTable symbolTable;
 
 %}
 
@@ -109,12 +109,12 @@ exp
 	| exp AND exp 				{cout<<"exp -> exp AND exp"<<endl;}
 	| exp OR exp 				{cout<<"exp -> exp OR exp"<<endl;}
 	| TRUE						{
-								$$.type=BOOL;
+								$$.type=BOOL_T;
 								$$.lineno = $1.lineno;
 								cout<<"exp -> TRUE"<<endl;
 								}
 	| FALSE 					{
-								$$.type=BOOL;
+								$$.type=BOOL_T;
 								$$.lineno = $1.lineno;
 								cout<<"exp -> FALSE"<<endl;
 								}
@@ -133,8 +133,9 @@ exp
 								
 								cout<<"exp -> ID"<<endl;
 								}
+								
 	| NUM B 					{
-								if ($1.value>255)  errorByteTooLarge(,)
+								if (atoi($1.value)>255)  errorByteTooLarge($1.lineno,$1.value);//TODO change this
 								cout<<"exp -> NUM B"<<endl;
 								}
 	| call 						{cout<<"exp -> call"<<endl;}
