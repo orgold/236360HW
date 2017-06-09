@@ -70,47 +70,117 @@ funcs
 	| fundecl funcs 		{cout<<"funcs -> fundecl funcs"<<endl;}
 
 statements
-	: statement				{cout<<"statements -> statement"<<endl;}
-	| statements statement 	{cout<<"statements -> statements statement"<<endl;}
+	: statement				{
+							$$.hasBreak = $1.hasBreak;
+							$$.lineno = $1.lineno;
+							cout<<"statements -> statement"<<endl;}
+	| statements statement 	{
+							if($1.hasBreak){
+										$$.hasBreak = 1;
+										$$.lineno = $1.lineno;
+									}
+									else {
+										$$.hasBreak = $2.hasBreak;
+										$$.lineno = $2.lineno;
+									}
+							cout<<"statements -> statements statement"<<endl;}
 
 statement
-	: openstatement			{cout<<"statement -> openstatement"<<endl;}
-	| closedstatement		{cout<<"statement -> closedstatement"<<endl;}
+	: openstatement			{
+							$$.hasBreak = $1.hasBreak;
+							$$.lineno = $1.lineno;
+							cout<<"statement -> openstatement"<<endl;}
+	| closedstatement		{
+							$$.hasBreak = $1.hasBreak;
+							$$.lineno = $1.lineno;
+							cout<<"statement -> closedstatement"<<endl;}
 
 openstatement
-	: IF LPAREN exp RPAREN statement							{cout<<"openstatement -> IF LPAREN exp RPAREN statement"<<endl;}
-	| IF LPAREN exp RPAREN closedstatement ELSE openstatement	{cout<<"openstatement -> IF LPAREN exp RPAREN closedstatement ELSE openstatement"<<endl;}
-	| WHILE LPAREN exp RPAREN openstatement						{cout<<"openstatement -> WHILE LPAREN exp RPAREN openstatement"<<endl;}
+	: IF LPAREN exp RPAREN statement							{
+																$$.hasBreak = $5.hasBreak;
+																$$.lineno = $5.lineno;
+																cout<<"openstatement -> IF LPAREN exp RPAREN statement"<<endl;}
+	| IF LPAREN exp RPAREN closedstatement ELSE openstatement	{
+																if($5.hasBreak)
+																	{
+																		$$.hasBreak=1;
+																		$$.lineno = $5.lineno;
+																	}
+																	else 
+																	{
+																		$$.hasBreak=$7.hasBreak;
+																		$$.lineno = $7.lineno;
+																	}
+																cout<<"openstatement -> IF LPAREN exp RPAREN closedstatement ELSE openstatement"<<endl;}
+	| WHILE LPAREN exp RPAREN openstatement						{
+																$$.hasBreak = 0;
+																cout<<"openstatement -> WHILE LPAREN exp RPAREN openstatement"<<endl;}
 
 closedstatement
-	: simplestatement 											{cout<<"closedstatement -> simplestatement"<<endl;}
-	| IF LPAREN exp RPAREN closedstatement ELSE closedstatement	{cout<<"closedstatement -> IF LPAREN exp RPAREN closedstatement ELSE closedstatement"<<endl;}
-	| WHILE LPAREN exp RPAREN closedstatement					{cout<<"closedstatement -> WHILE LPAREN exp RPAREN closedstatement"<<endl;}
-	| SWITCH LPAREN exp RPAREN LBRACE caselist RBRACE SC		{cout<<"closedstatement -> SWITCH LPAREN exp RPAREN LBRACE caselist RBRACE SC"<<endl;}
+	: simplestatement 											{
+																	$$.hasBreak = $1.hasBreak;
+																	$$.lineno = $1.lineno;
+																	cout<<"closedstatement -> simplestatement"<<endl;
+																}
+	| IF LPAREN exp RPAREN closedstatement ELSE closedstatement	{
+																	if($5.hasBreak)
+																	{
+																		$$.hasBreak=1;
+																		$$.lineno = $5.lineno;
+																	}
+																	else 
+																	{
+																		$$.hasBreak=$7.hasBreak;
+																		$$.lineno = $7.lineno;
+																	}
+																	cout<<"closedstatement -> IF LPAREN exp RPAREN closedstatement ELSE closedstatement"<<endl;
+																}
+	| WHILE LPAREN exp RPAREN closedstatement					{
+																	$$.hasBreak = 0;
+																	cout<<"closedstatement -> WHILE LPAREN exp RPAREN closedstatement"<<endl;
+																}
+	| SWITCH LPAREN exp RPAREN LBRACE caselist RBRACE SC		{
+																	$$.hasBreak = $6.hasBreak;
+																	$$.lineno = $6.lineno;
+																	cout<<"closedstatement -> SWITCH LPAREN exp RPAREN LBRACE caselist RBRACE SC"<<endl;
+																}
 
 caselist
 	: casestat					{
+									if($1.hasBreak){
+										$$.hasBreak = 1;
+										$$.lineno = $1.lineno;
+									}
 									cout<<"caselist -> casestat"<<endl;
 								}
 	| casestat caselist			{
-
+									if($1.hasBreak){
+										$$.hasBreak = 1;
+										$$.lineno = $1.lineno;
+									}
+									else {
+										$$.hasBreak = $2.hasBreak;
+										$$.lineno = $2.lineno;
+									}
 									cout<<"caselist -> casestat caselist"<<endl;
 								}
 
 casestat
 	: CASE NUM COLON statement BREAK SC 		{
-													$$.type = $4.type;
+													$$.hasBreak = $4.hasBreak;
+													$$.lineno = $4.lineno;
 													cout<<"casestat -> CASE NUM COLON statement BREAK SC"<<endl;
 												}
 	| CASE NUM B COLON statement BREAK SC 		{
-													$$.type = $5.type;
+													$$.hasBreak = $5.hasBreak;
+													$$.lineno = $5.lineno;
 													cout<<"casestat -> CASE NUM B COLON statement BREAK SC"<<endl;
 												}
 
 simplestatement 
 	: type ID SC				{
 								try{
-								insertVar($2.idName,$1.type);
+									insertVar($2.idName,$1.type);
 								}
 								catch(errorDefException e)
 								{
@@ -118,7 +188,7 @@ simplestatement
 									exit(1);
 								}
 								free($2.idName);
-								$$.lineno = $2.lineno;
+								//$$.lineno = $2.lineno;
 								$$.hasBreak =0;
 								cout<<"simplestatement -> type ID SC"<<endl;}
 	| type ID ASSIGN exp SC 	{
@@ -167,7 +237,6 @@ simplestatement
 										errorMismatch($1.lineno);
 										exit(1);
 									}
-									$$.type = VOID_T;
 									$$.hasBreak =0;
 									cout<<"simplestatement -> RETURN SC"<<endl;
 								}
@@ -177,23 +246,32 @@ simplestatement
 										errorMismatch($1.lineno);
 										exit(1);
 									}
-									$$.type = $2.type;
 									$$.hasBreak =0;
 									cout<<"simplestatement -> RETURN exp SC"<<endl;
 								}
 	| BREAK SC 					{	
 									$$.hasBreak = true;
+									$$.lineno = $1.lineno;
 									cout<<"simplestatement -> BREAK SC"<<endl;
 								}
-	| LBRACE statements RBRACE 	{
+	| LBRACE {symbolTable.insertScope();} statements RBRACE 	{
 									$$.hasBreak = $2.hasBreak;
+									$$.lineno = $2.lineno;
+									symbolTable.removeScope();
 									cout<<"simplestatement -> { statements }"<<endl;
 								}
 
 	
 
 fundecl 
-	: fundecl_helper RPAREN LBRACE statements RBRACE		{cout<<"fundecl -> rettype ID LPAREN formals RPAREN"<<endl;}
+	: fundecl_helper RPAREN LBRACE statements RBRACE 		{
+															if($4.hasBreak=1)
+															{
+																errorUnexpectedBreak($4.lineno);
+																exit(1);
+															}
+															symbolTable.removeScope();
+															cout<<"fundecl -> rettype ID LPAREN formals RPAREN"<<endl;}
 
 fundecl_helper 
 	: rettype ID LPAREN formals   	{
