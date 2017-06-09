@@ -5,11 +5,14 @@
 	using namespace std;
 
 	extern int yylex();
-	int yyerror(char * message);
+	void yyerror(char * message);
 	SymbolTable symbolTable;
 	TYPE globalFunctionRetType;
-
+	bool globalIsDeclSensitive = 0;
+	extern int yylineno;
 %}
+
+%locations
 
 %left OR;
 %left AND;
@@ -19,7 +22,7 @@
 %left BINOP1;
 %right NOT;
 
-
+%token END_OF_FILE;
 %token SC;
 %token COLON;
 %token ASSIGN;
@@ -46,36 +49,44 @@
 %nonassoc NUM;
 %nonassoc B;
 
-
 %%
 
 
-program : funcs 			{
-								try{
-									TYPE typeTemp = symbolTable.checkFuncTypeAndArgs("main", nullptr,0);
-								}
-								catch (errorUndefFuncException& e){
-									errorMainMissing();
-									exit(1);
-								}
-								if (typeTemp != VOID_T){
-									errorMainMissing();
-									exit(1);
-								}
-								cout<<"program -> funcs"<<endl;
+program 
+	: funcs 		{
+						try{
+							TYPE typeTemp = symbolTable.checkFuncTypeAndArgs("main", NULL,0);
+							if (typeTemp != VOID_T){
+								errorMainMissing();
+								exit(1);
 							}
+						}
+						catch (errorUndefFuncException& e){
+							errorMainMissing();
+							exit(1);
+						}
+						catch (errorPrototypeMismatchException& e){
+							errorMainMissing();
+							exit(1);
+						}
+						symbolTable.removeGlobalScope();
+						//cout<<"program -> funcs"<<endl;
+					}
+
 
 funcs 
-	: 						{cout<<"funcs -> eps"<<endl;}
-	| fundecl funcs 		{cout<<"funcs -> fundecl funcs"<<endl;}
+	: fundecl funcs			{}
+	| 						{/*cout<< "took the empty" << endl;*/}
+
 
 statements
 	: statement				{
-							$$.hasBreak = $1.hasBreak;
-							$$.lineno = $1.lineno;
-							cout<<"statements -> statement"<<endl;}
+								$$.hasBreak = $1.hasBreak;
+								$$.lineno = $1.lineno;
+								//cout<<"statements -> statement"<<endl;
+							}
 	| statements statement 	{
-							if($1.hasBreak){
+								if($1.hasBreak){
 										$$.hasBreak = 1;
 										$$.lineno = $1.lineno;
 									}
@@ -83,66 +94,82 @@ statements
 										$$.hasBreak = $2.hasBreak;
 										$$.lineno = $2.lineno;
 									}
-							cout<<"statements -> statements statement"<<endl;}
+								//cout<<"statements -> statements statement"<<endl;
+							}
 
 statement
 	: openstatement			{
-							$$.hasBreak = $1.hasBreak;
-							$$.lineno = $1.lineno;
-							cout<<"statement -> openstatement"<<endl;}
+								$$.hasBreak = $1.hasBreak;
+								$$.lineno = $1.lineno;
+								//cout<<"statement -> openstatement"<<endl;
+							}
 	| closedstatement		{
-							$$.hasBreak = $1.hasBreak;
-							$$.lineno = $1.lineno;
-							cout<<"statement -> closedstatement"<<endl;}
+								$$.hasBreak = $1.hasBreak;
+								$$.lineno = $1.lineno;
+								//cout<<"statement -> closedstatement"<<endl;
+							}
+
+MarkOn:  {globalIsDeclSensitive = true;}
+MarkOff: {globalIsDeclSensitive = false;}
+
+IfStart: IF LPAREN exp 			{if($3.type != BOOL_T){errorMismatch($1.lineno);exit(1);}}
+
+WhileStart : WHILE LPAREN exp {if($3.type != BOOL_T){errorMismatch($1.lineno);exit(1);}}
 
 openstatement
-	: IF LPAREN exp RPAREN statement							{
-																$$.hasBreak = $5.hasBreak;
-																$$.lineno = $5.lineno;
-																cout<<"openstatement -> IF LPAREN exp RPAREN statement"<<endl;}
-	| IF LPAREN exp RPAREN closedstatement ELSE openstatement	{
-																if($5.hasBreak)
-																	{
-																		$$.hasBreak=1;
-																		$$.lineno = $5.lineno;
-																	}
-																	else 
-																	{
-																		$$.hasBreak=$7.hasBreak;
-																		$$.lineno = $7.lineno;
-																	}
-																cout<<"openstatement -> IF LPAREN exp RPAREN closedstatement ELSE openstatement"<<endl;}
-	| WHILE LPAREN exp RPAREN openstatement						{
-																$$.hasBreak = 0;
-																cout<<"openstatement -> WHILE LPAREN exp RPAREN openstatement"<<endl;}
+	: IfStart RPAREN MarkOn statement MarkOff			{
+																$$.hasBreak = $4.hasBreak;
+																$$.lineno = $4.lineno;
+																//cout<<"openstatement -> IF LPAREN exp RPAREN statement"<<endl;
+															}
+
+	| IfStart RPAREN MarkOn closedstatement MarkOff ELSE MarkOn openstatement MarkOff	
+		{
+			if($4.hasBreak)
+				{
+					$$.hasBreak=1;
+					$$.lineno = $4.lineno;
+				}
+				else 
+				{
+					$$.hasBreak=$7.hasBreak;
+					$$.lineno = $7.lineno;
+				}
+			//cout<<"openstatement -> IF LPAREN exp RPAREN closedstatement ELSE openstatement"<<endl;
+		}
+	| WhileStart RPAREN MarkOn openstatement MarkOff		{
+																	$$.hasBreak = 0;
+																	//cout<<"openstatement -> WHILE LPAREN exp RPAREN openstatement"<<endl;
+																}
 
 closedstatement
 	: simplestatement 											{
 																	$$.hasBreak = $1.hasBreak;
 																	$$.lineno = $1.lineno;
-																	cout<<"closedstatement -> simplestatement"<<endl;
+																	//cout<<"closedstatement -> simplestatement"<<endl;
 																}
-	| IF LPAREN exp RPAREN closedstatement ELSE closedstatement	{
-																	if($5.hasBreak)
-																	{
-																		$$.hasBreak=1;
-																		$$.lineno = $5.lineno;
-																	}
-																	else 
-																	{
-																		$$.hasBreak=$7.hasBreak;
-																		$$.lineno = $7.lineno;
-																	}
-																	cout<<"closedstatement -> IF LPAREN exp RPAREN closedstatement ELSE closedstatement"<<endl;
-																}
-	| WHILE LPAREN exp RPAREN closedstatement					{
+	| IfStart RPAREN MarkOn closedstatement MarkOff ELSE MarkOn closedstatement MarkOff
+		{
+			if($4.hasBreak)
+			{
+				$$.hasBreak=1;
+				$$.lineno = $4.lineno;
+			}
+			else 
+			{
+				$$.hasBreak=$7.hasBreak;
+				$$.lineno = $7.lineno;
+			}
+			//cout<<"closedstatement -> IF LPAREN exp RPAREN closedstatement ELSE closedstatement"<<endl;
+		}
+	| WhileStart RPAREN MarkOn closedstatement MarkOff	{
 																	$$.hasBreak = 0;
-																	cout<<"closedstatement -> WHILE LPAREN exp RPAREN closedstatement"<<endl;
+																	//cout<<"closedstatement -> WHILE LPAREN exp RPAREN closedstatement"<<endl;
 																}
-	| SWITCH LPAREN exp RPAREN LBRACE caselist RBRACE SC		{
-																	$$.hasBreak = $6.hasBreak;
-																	$$.lineno = $6.lineno;
-																	cout<<"closedstatement -> SWITCH LPAREN exp RPAREN LBRACE caselist RBRACE SC"<<endl;
+	| SWITCH LPAREN exp {if($3.type != BYTE_T && $3.type != INT_T){errorMismatch($1.lineno);exit(1);}} RPAREN LBRACE caselist RBRACE SC		{
+																	$$.hasBreak = $7.hasBreak;
+																	$$.lineno = $7.lineno;
+																	//cout<<"closedstatement -> SWITCH LPAREN exp RPAREN LBRACE caselist RBRACE SC"<<endl;
 																}
 
 caselist
@@ -151,7 +178,7 @@ caselist
 										$$.hasBreak = 1;
 										$$.lineno = $1.lineno;
 									}
-									cout<<"caselist -> casestat"<<endl;
+									//cout<<"caselist -> casestat"<<endl;
 								}
 	| casestat caselist			{
 									if($1.hasBreak){
@@ -162,53 +189,63 @@ caselist
 										$$.hasBreak = $2.hasBreak;
 										$$.lineno = $2.lineno;
 									}
-									cout<<"caselist -> casestat caselist"<<endl;
+									//cout<<"caselist -> casestat caselist"<<endl;
 								}
 
 casestat
-	: CASE NUM COLON statement BREAK SC 		{
-													$$.hasBreak = $4.hasBreak;
-													$$.lineno = $4.lineno;
-													cout<<"casestat -> CASE NUM COLON statement BREAK SC"<<endl;
-												}
-	| CASE NUM B COLON statement BREAK SC 		{
+	: CASE NUM COLON   MarkOn statement MarkOff BREAK SC 		{
 													$$.hasBreak = $5.hasBreak;
 													$$.lineno = $5.lineno;
-													cout<<"casestat -> CASE NUM B COLON statement BREAK SC"<<endl;
+													//cout<<"casestat -> CASE NUM COLON statement BREAK SC"<<endl;
+												}
+	| CASE NUM B COLON MarkOn statement MarkOff BREAK SC 		{
+													$$.hasBreak = $6.hasBreak;
+													$$.lineno = $6.lineno;
+													//cout<<"casestat -> CASE NUM B COLON statement BREAK SC"<<endl;
 												}
 
 simplestatement 
 	: type ID SC				{
-								try{
-									insertVar($2.idName,$1.type);
-								}
-								catch(errorDefException e)
-								{
-									errorDef($2.lineno,e.id.c_str());
-									exit(1);
-								}
-								free($2.idName);
-								//$$.lineno = $2.lineno;
-								$$.hasBreak =0;
-								cout<<"simplestatement -> type ID SC"<<endl;}
-	| type ID ASSIGN exp SC 	{
+									if(globalIsDeclSensitive)
+										symbolTable.insertScope();
 									try{
-										insertVar($2.idName,$1.type);
+										symbolTable.insertVar($2.idName,$1.type);
 									}
 									catch(errorDefException e)
 									{
 										errorDef($2.lineno,e.id.c_str());
 										exit(1);
 									}
-									if($1.type!= $4.type && !($1.type==INT_T&&$4.type==BYTE_T)) 
+									if(globalIsDeclSensitive)
+										symbolTable.removeScope();
+									free($2.idName);
+									//$$.lineno = $2.lineno;
+									$$.hasBreak =0;
+									//cout<<"simplestatement -> type ID SC"<<endl;
+								}
+	| type ID ASSIGN exp SC 	{
+									if(globalIsDeclSensitive)
+										symbolTable.insertScope();
+									try{
+										symbolTable.insertVar($2.idName,$1.type);
+									}
+									catch(errorDefException e)
+									{
+										errorDef($2.lineno,e.id.c_str());
+										exit(1);
+									}
+									if( $1.type!= $4.type &&
+									  !($1.type==INT_T&&$4.type==BYTE_T)) 
 									{
 										errorMismatch($2.lineno);
 										exit(1);
 									}
+									if(globalIsDeclSensitive)
+										symbolTable.removeScope();
 									free($2.idName);
 									$$.lineno = $2.lineno;
 									$$.hasBreak =0;
-									cout<<"simplestatement -> type ID ASSIGN exp SC"<<endl;
+									//cout<<"simplestatement -> type ID ASSIGN exp SC"<<endl;
 								}
 	| ID ASSIGN exp SC 			{
 									try{
@@ -225,11 +262,11 @@ simplestatement
 											exit(1);
 									}
 									$$.hasBreak =0;
-									cout<<"simplestatement -> ID ASSIGN exp SC"<<endl;
+									//cout<<"simplestatement -> ID ASSIGN exp SC"<<endl;
 								}
 	| call SC 					{
 									$$.hasBreak =0;
-									cout<<"simplestatement -> call SC"<<endl;
+									//cout<<"simplestatement -> call SC"<<endl;
 								}
 	| RETURN SC 				{
 									if(globalFunctionRetType != VOID_T) 
@@ -238,40 +275,45 @@ simplestatement
 										exit(1);
 									}
 									$$.hasBreak =0;
-									cout<<"simplestatement -> RETURN SC"<<endl;
+									//cout<<"simplestatement -> RETURN SC"<<endl;
 								}
 	| RETURN exp SC				{
-									if(globalFunctionRetType != $2.type && !(globalFunctionRetType ==INT_T &&$2.type == BYTE_T ) )
+									if( globalFunctionRetType != $2.type && 
+									    !(globalFunctionRetType ==INT_T &&$2.type == BYTE_T )
+										|| globalFunctionRetType == VOID_T)
 									{
 										errorMismatch($1.lineno);
 										exit(1);
 									}
+									
 									$$.hasBreak =0;
-									cout<<"simplestatement -> RETURN exp SC"<<endl;
+									//cout<<"simplestatement -> RETURN exp SC"<<endl;
 								}
 	| BREAK SC 					{	
 									$$.hasBreak = true;
 									$$.lineno = $1.lineno;
-									cout<<"simplestatement -> BREAK SC"<<endl;
+									//cout<<"simplestatement -> BREAK SC"<<endl;
 								}
-	| LBRACE {symbolTable.insertScope();} statements RBRACE 	{
-									$$.hasBreak = $2.hasBreak;
-									$$.lineno = $2.lineno;
-									symbolTable.removeScope();
-									cout<<"simplestatement -> { statements }"<<endl;
-								}
+	| LBRACE {symbolTable.insertScope(); globalIsDeclSensitive=false;} statements RBRACE 	
+		{						
+			$$.hasBreak = $2.hasBreak;
+			$$.lineno = $2.lineno;
+			symbolTable.removeScope();
+			//cout<<"simplestatement -> { statements }"<<endl;
+		}
 
 	
 
 fundecl 
 	: fundecl_helper RPAREN LBRACE statements RBRACE 		{
-															if($4.hasBreak=1)
-															{
-																errorUnexpectedBreak($4.lineno);
-																exit(1);
+																if($4.hasBreak)
+																{
+																	errorUnexpectedBreak($4.lineno);
+																	exit(1);
+																}
+																symbolTable.removeScope();
+																//cout<<"fundecl -> rettype ID LPAREN formals RPAREN"<<endl;
 															}
-															symbolTable.removeScope();
-															cout<<"fundecl -> rettype ID LPAREN formals RPAREN"<<endl;}
 
 fundecl_helper 
 	: rettype ID LPAREN formals   	{
@@ -304,12 +346,12 @@ exp
 									if( $1.type == INT_T ||
 										$3.type == INT_T )
 									{
-										$$.type == INT_T;
+										$$.type = INT_T;
 									} else {
-										$$.type == BYTE_T;
+										$$.type = BYTE_T;
 									}
 									$$.lineno = $1.lineno;
-									cout<<"exp -> exp BINOP1 exp"<<endl;
+									//cout<<"exp -> exp BINOP1 exp"<<endl;
 								}
 	| exp BINOP2 exp			{
 									if( $1.type != INT_T  &&
@@ -323,22 +365,22 @@ exp
 									if( $1.type == INT_T ||
 										$3.type == INT_T )
 									{
-										$$.type == INT_T;
+										$$.type = INT_T;
 									} else {
-										$$.type == BYTE_T;
+										$$.type = BYTE_T;
 									}
 									$$.lineno = $1.lineno;
-									cout<<"exp -> exp BINOP2 exp"<<endl;
+									//cout<<"exp -> exp BINOP2 exp: $$ type type is: " << toCString($$.type)<<endl;
 								}
 	| NUM 						{
 									$$.type = INT_T;
 									$$.lineno = $1.lineno;
 									free($1.value);
-									cout<<"exp -> num"<<endl;
+									//cout<<"exp -> num"<<endl;
 								}
 	| LPAREN exp RPAREN 		{
 									$$.type = $2.type;
-									cout<<"exp -> LPAREN exp RPAREN"<<endl;
+									//cout<<"exp -> LPAREN exp RPAREN"<<endl;
 								}
 	| NOT exp					{
 									if($2.type != BOOL_T){
@@ -347,7 +389,7 @@ exp
 									}
 									$$.type = BOOL_T;
 									$$.lineno = $1.lineno;
-									cout<<"exp -> NOT exp"<<endl;
+									//cout<<"exp -> NOT exp"<<endl;
 								}
 	| exp AND exp 				{
 									if( $1.type != BOOL_T ||
@@ -358,7 +400,7 @@ exp
 									}
 									$$.type = BOOL_T;
 									$$.lineno = $1.lineno;
-									cout<<"exp -> exp AND exp"<<endl;
+									//cout<<"exp -> exp AND exp"<<endl;
 								}
 	| exp OR exp 				{
 									if( $1.type != BOOL_T ||
@@ -369,17 +411,17 @@ exp
 									}
 									$$.type = BOOL_T;
 									$$.lineno = $1.lineno;
-									cout<<"exp -> exp OR exp"<<endl;
+									//cout<<"exp -> exp OR exp"<<endl;
 								}
 	| TRUE						{
 									$$.type=BOOL_T;
 									$$.lineno = $1.lineno;
-									cout<<"exp -> TRUE"<<endl;
+									//cout<<"exp -> TRUE"<<endl;
 								}
 	| FALSE 					{
 									$$.type=BOOL_T;
 									$$.lineno = $1.lineno;
-									cout<<"exp -> FALSE"<<endl;
+									//cout<<"exp -> FALSE"<<endl;
 								}
 	| exp RELOP1 exp 			{
 									if( $1.type != INT_T  &&
@@ -392,7 +434,7 @@ exp
 									}
 									$$.type = BOOL_T;
 									$$.lineno = $1.lineno;
-									cout<<"exp -> exp RELOP1 exp"<<endl;
+									//cout<<"exp -> exp RELOP1 exp"<<endl;
 								}
 	| exp RELOP2 exp 			{
 									if( $1.type != INT_T  &&
@@ -405,25 +447,25 @@ exp
 									}
 									$$.type = BOOL_T;
 									$$.lineno = $1.lineno;
-									cout<<"exp -> exp RELOP2 exp"<<endl;
+									//cout<<"exp -> exp RELOP2 exp"<<endl;
 								}
 	| STRING 					{
 									$$.type = STRING_T;
 									$$.lineno = $1.lineno;
-									cout<<"exp -> STRING"<<endl;
+									//cout<<"exp -> STRING"<<endl;
 								}
 	| ID 						{
 								try{
-								$$.lineno = $1.lineno;
-								$$.type=symbolTable.getType($1.idName);
+									$$.lineno = $1.lineno;
+									$$.type=symbolTable.getType($1.idName);
 								}
 								catch (errorUndefException& e)
 								{
 									errorUndef($$.lineno,e.id.c_str()); 
 									exit(1);
 								}
+								//cout<<"exp -> ID: " << $1.idName << " of type: " << toCString($$.type) <<endl;
 								free($1.idName);
-								cout<<"exp -> ID"<<endl;
 								}
 								
 	| NUM B 					{
@@ -434,82 +476,89 @@ exp
 									$$.type = BYTE_T;
 									$$.lineno = $1.lineno;
 									free($1.value);
-									cout<<"exp -> NUM B"<<endl;
+									//cout<<"exp -> NUM B"<<endl;
 								}
 	| call 						{
 									$$.type = $1.type;
-									cout<<"exp -> call"<<endl;
+									//cout<<"exp -> call"<<endl;
 								}
 
 call 
 	: ID LPAREN RPAREN 			{
 								try {
-								$$.type=symbolTable.checkFuncTypeAndArgs($1.idName,nullptr,0);
+								$$.type=symbolTable.checkFuncTypeAndArgs($1.idName,NULL,0);
 								}
 								catch (errorUndefFuncException& e){
-									errorUndefFunc($1.lineno,e.id);
+									errorUndefFunc($1.lineno,e.id.c_str());
 									exit(1);
 								}
 								catch (errorPrototypeMismatchException& e)
 								{
-									errorPrototypeMismatch($1.lineno,e.id,e.argTypes);
+									errorPrototypeMismatch($1.lineno,e.id.c_str(),e.argTypes);
 									exit(1);
 								}
 								free($1.idName);
 								
 								$$.lineno = $1.lineno;
-									cout<<"exp -> ID LPAREN RPAREN"<<endl;}
+									//cout<<"exp -> ID LPAREN RPAREN"<<endl;
+									}
 	| ID LPAREN explist RPAREN 	{
 								try {
 								$$.type=symbolTable.checkFuncTypeAndArgs($1.idName,$3.typeList,$3.typeListSize);
 								}
 								catch (errorUndefFuncException& e){
-									errorUndefFunc($1.lineno,e.id);
+									errorUndefFunc($1.lineno,e.id.c_str());
 									exit(1);
 								}
 								catch (errorPrototypeMismatchException& e)
 								{
-									errorPrototypeMismatch($1.lineno,e.id,e.argTypes);
+									errorPrototypeMismatch($1.lineno,e.id.c_str(),e.argTypes);
 									exit(1);
 								}
 								$$.lineno = $1.lineno;
 								free($1.idName);
 								free($3.typeList);
-								cout<<"exp -> ID LPAREN explist RPAREN"<<endl;}
+								//cout<<"exp -> ID LPAREN explist RPAREN"<<endl;
+								}
 
 explist 
 	: exp 						{
 								$$.typeList=(TYPE*)malloc(sizeof(TYPE));
 								$$.typeListSize=1;
 								$$.typeList[0]=$1.type;
-								cout<<"explist -> exp"<<endl;}
+								//cout<<"explist -> exp"<<endl;
+								}
 	| exp COMMA explist  		{
 								$$.typeList =(TYPE*) realloc($3.typeList,sizeof(TYPE)*($3.typeListSize+1));
 								$$.typeListSize=$3.typeListSize+1;
 								$$.typeList[$3.typeListSize]=$1.type;
-								cout<<"explist -> exp COMMA explist"<<endl;}
+								//cout<<"explist -> exp COMMA explist"<<endl;
+								}
 
 type 
 	: INT 						{
 								$$.type=INT_T;
-								cout<<"type -> INT"<<endl;}
+								//cout<<"type -> INT"<<endl;
+								}
 	| BYTE 						{
 								$$.type=BYTE_T;
-								cout<<"type -> BYTE"<<endl;}
+								//cout<<"type -> BYTE"<<endl;
+								}
 	| BOOL 						{
 								$$.type=BOOL_T;
-								cout<<"type -> BOOL"<<endl;}
+								//cout<<"type -> BOOL"<<endl;
+								}
 
 formals 
 	: 							{
 									$$.typeListSize = 0;
-									cout<<"formals -> eps"<<endl;
+									//cout<<"formals -> eps"<<endl;
 								}
 	| formalslist 				{
 									$$.typeList = $1.typeList;
 									$$.typeListSize = $1.typeListSize;
 									$$.idList = $1.idList;
-									cout<<"formals -> formalslist"<<endl;
+									//cout<<"formals -> formalslist"<<endl;
 								}
 
 formalslist	
@@ -519,7 +568,7 @@ formalslist
 										$$.typeList[0] = $1.type;
 										$$.idList = (char**) malloc(sizeof(char*));
 										$$.idList[0] = $1.idName;
-										cout<<"formalslist -> formaldecl"<<endl;
+										//cout<<"formalslist -> formaldecl"<<endl;
 									}
 	| formaldecl COMMA formalslist 	{
 										$$.typeList = (TYPE*) realloc($3.typeList, sizeof(TYPE)*($3.typeListSize + 1));
@@ -527,22 +576,24 @@ formalslist
 										$$.typeList[$3.typeListSize] = $1.type;
 										$$.idList = (char**) realloc($3.idList, sizeof(char*)*($3.typeListSize + 1));
 										$$.idList[$3.typeListSize] = $1.idName;
-										cout<<"formalslist -> formaldecl COMMA formalslist"<<endl;
+										//cout<<"formalslist -> formaldecl COMMA formalslist"<<endl;
 									}
 
 formaldecl : type ID 			{
 									$$.type = $1.type;
 									$$.idName = $2.idName;
-									cout<<"formaldecl -> type ID "<<endl;
+									//cout<<"formaldecl -> type ID "<<endl;
 								}
 
 rettype 
 	: type 						{
 								$$.type=$1.type;
-								cout<<"rettype -> type  "<<endl;}
+								//cout<<"rettype -> type  "<<endl;
+								}
 	| VOID 						{
 								$$.type=VOID_T;
-								cout<<"rettype -> VOID"<<endl;}
+								//cout<<"rettype -> VOID"<<endl;
+								}
 %%
 
 int main()
@@ -550,8 +601,8 @@ int main()
 	yyparse();
 }
 
-int yyerror(char * message)
+void yyerror(char* message)
 {
-	cout<<"Parse error: "<<message<<endl;
+	errorSyn(yylineno);
 	exit(0);
 }

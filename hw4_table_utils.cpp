@@ -90,6 +90,7 @@ SymbolTable::SymbolTable()
 	functionMap["print"] = fooData;
 	
 	//add printi
+	fooData.paramTypeList.clear();
 	fooData.paramTypeList.push_back(INT_T);
 	functionMap["printi"] = fooData;
 }
@@ -112,16 +113,20 @@ TYPE SymbolTable::checkFuncTypeAndArgs(string id, TYPE* typeList,int size)
 	if(size != savedFuncData.paramTypeList.size())  throw errorPrototypeMismatchException(id,savedFuncData.paramTypeList);
 	for(int i=0;i<size;i++)
 	{
-		if(typeList[i]!=savedFuncData.paramTypeList[size - 1- i]) 
+		if(typeList[i]!=savedFuncData.paramTypeList[size - 1- i] 
+		   &&!(savedFuncData.paramTypeList[size - 1- i] == INT_T
+		       && typeList[i] == BYTE_T)) 
 			throw errorPrototypeMismatchException(id,savedFuncData.paramTypeList);
 	}
 	return savedFuncData.returnType;
 }
 
 SymbolTable::~SymbolTable()
-{
-	
-	
+{}
+
+void SymbolTable::removeGlobalScope()
+{	
+	endScope();
 	for (std::vector<string>::iterator ite=funcsByOrderArrival.begin();ite!=funcsByOrderArrival.end();ite++)
 	{
 		vector<const char*> arrangeForPrint(functionMap[*ite].paramTypeList.size());
@@ -137,7 +142,6 @@ SymbolTable::~SymbolTable()
 			(makeFunctionType(toCString(functionMap[*ite].returnType),arrangeForPrint)).c_str()
 		);
 	}
-		
 }
 
 void SymbolTable::coverInsertFunction(const string& name,TYPE* typeList,int paramNum, TYPE retType, char** paramNames)

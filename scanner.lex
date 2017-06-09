@@ -68,6 +68,9 @@ int handle_default();
 						return ID;
 					}
 \"([^\n\r\"\\]|\\[rnt"\\])+\" return STRING;
+<<EOF>> {return END_OF_FILE;}
+
+\/\/[^\r\n]*[\r|\n|\r\n]?         ;
 .					errorLex(yylineno);
 
 %%

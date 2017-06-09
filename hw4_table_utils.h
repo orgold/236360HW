@@ -159,7 +159,7 @@ public:
 	TYPE checkFuncTypeAndArgs(string, TYPE*,int);
 	//getPosition(name);
 	TYPE getType(string name);
-	
+	void removeGlobalScope();
 #ifdef DEBUG
 	void print()
 	{
