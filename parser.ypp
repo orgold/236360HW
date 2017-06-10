@@ -21,8 +21,6 @@
 %left BINOP2;
 %left BINOP1;
 %right NOT;
-
-%token END_OF_FILE;
 %token SC;
 %token COLON;
 %token ASSIGN;
@@ -54,23 +52,7 @@
 
 program 
 	: funcs 		{
-						try{
-							TYPE typeTemp = symbolTable.checkFuncTypeAndArgs("main", NULL,0);
-							if (typeTemp != VOID_T){
-								errorMainMissing();
-								exit(1);
-							}
-						}
-						catch (errorUndefFuncException& e){
-							errorMainMissing();
-							exit(1);
-						}
-						catch (errorPrototypeMismatchException& e){
-							errorMainMissing();
-							exit(1);
-						}
-						symbolTable.removeGlobalScope();
-						//cout<<"program -> funcs"<<endl;
+						
 					}
 
 
@@ -599,6 +581,23 @@ rettype
 int main()
 {
 	yyparse();
+	try{
+							TYPE typeTemp = symbolTable.checkFuncTypeAndArgs("main", NULL,0);
+							if (typeTemp != VOID_T){
+								errorMainMissing();
+								exit(1);
+							}
+						}
+						catch (errorUndefFuncException& e){
+							errorMainMissing();
+							exit(1);
+						}
+						catch (errorPrototypeMismatchException& e){
+							errorMainMissing();
+							exit(1);
+						}
+						symbolTable.removeGlobalScope();
+						//cout<<"program -> funcs"<<endl;
 }
 
 void yyerror(char* message)
