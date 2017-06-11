@@ -488,6 +488,10 @@ call
 								try {
 								$$.type=symbolTable.checkFuncTypeAndArgs($1.idName,$3.typeList,$3.typeListSize);
 								}
+								catch(errorMismatchException& e){
+									errorMismatch($2.lineno);
+									exit(1);
+								}
 								catch (errorUndefFuncException& e){
 									errorUndefFunc($1.lineno,e.id.c_str());
 									exit(1);

@@ -71,6 +71,12 @@ public:
 	errorPrototypeMismatchException(){};
 };
 
+class errorMismatchException
+{
+	public:
+	errorMismatchException(){};
+};
+
 struct VarEntryData
 {
 	TYPE type;
