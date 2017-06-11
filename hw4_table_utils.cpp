@@ -108,17 +108,6 @@ TYPE SymbolTable::getType(string name)
 
 TYPE SymbolTable::checkFuncTypeAndArgs(string id, TYPE* typeList,int size)
 {
-	//UGLY HACK FOR STRING TYPE
-	if(id != "print"){
-		for(int i=0;i<size;i++)
-		{
-			if(typeList[i] == STRING_T)
-			{
-				throw errorMismatchException();
-			}
-		}
-	}
-	//rest is normal
 	if(functionMap.find(id)==functionMap.end()) throw errorUndefFuncException(id);
 	FunctionData savedFuncData = functionMap[id];
 	if(size != savedFuncData.paramTypeList.size())  throw errorPrototypeMismatchException(id,savedFuncData.paramTypeList);
