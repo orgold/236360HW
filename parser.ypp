@@ -301,6 +301,7 @@ fundecl
 
 fundecl_helper 
 	: rettype ID LPAREN formals   	{
+										CodeBuffer::instance().emit(string($2.idName) + ":");
 										try {
 											symbolTable.coverInsertFunction($2.idName,$4.typeList,$4.typeListSize,$1.type,$4.idList);
 										}
@@ -588,6 +589,8 @@ rettype
 
 int main()
 {
+	insert_printi();
+	insert_print();
 	yyparse();
 	try{
 		TYPE typeTemp = symbolTable.checkFuncTypeAndArgs("main", NULL,0);

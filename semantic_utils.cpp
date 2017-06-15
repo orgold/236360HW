@@ -40,3 +40,19 @@ REG expMakeBinOp2(REG exp1,REG exp2,char* op)
 	free(op);
 	return exp1;
 }
+
+void insert_printi(){
+	CodeBuffer::instance().emit("printi:");
+	CodeBuffer::instance().emit("lw $a0,0($sp)");
+	 CodeBuffer::instance().emit("li $v0,1");
+	 CodeBuffer::instance().emit("syscall");
+	 CodeBuffer::instance().emit("jr $ra");
+}
+
+void insert_print(){
+	CodeBuffer::instance().emit("print:");
+	CodeBuffer::instance().emit("lw $a0,0($sp)");
+	 CodeBuffer::instance().emit("li $v0,0");
+	 CodeBuffer::instance().emit("syscall");
+	 CodeBuffer::instance().emit("jr $ra");
+}
