@@ -5,7 +5,7 @@
 #include "parser.tab.hpp"
 
 int handle_default();
-
+void allocate_value();
 %}
 
 %option yylineno
@@ -36,16 +36,17 @@ int handle_default();
 "case"				return handle_default();
 [+-] 				{
 						yylval.lineno=yylineno;
+						allocate_value();
 						return BINOP2;
 					}
 [*/]				{
 						yylval.lineno=yylineno;
+						allocate_value();
 						return BINOP1;
 					}
 0|[1-9][0-9]* 		{	
 						yylval.lineno =yylineno;
-						yylval.value=(char*)malloc(strlen(yytext));
-						strcpy(yylval.value,yytext);
+						allocate_value();
 						return NUM;
 					}
 \(					return handle_default();
@@ -130,4 +131,11 @@ int handle_default()
 		return LBRACE;
 	if(0==strcmp(yytext,"}"))
 		return RBRACE;
+}
+
+
+void allocate_value()
+{
+	yylval.value=(char*)malloc(strlen(yytext));
+	strcpy(yylval.value,yytext);
 }

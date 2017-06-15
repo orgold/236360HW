@@ -2,11 +2,13 @@
 	#include <iostream>
 	#include <stdlib.h>
 	#include "hw4_table_utils.h"
+	#include "semantic_utils.h"
 	using namespace std;
 
 	extern int yylex();
 	void yyerror(char * message);
 	SymbolTable symbolTable;
+	RegPool regPool;
 	TYPE globalFunctionRetType;
 	bool globalIsDeclSensitive = 0;
 	extern int yylineno;
@@ -332,6 +334,7 @@ exp
 									} else {
 										$$.type = BYTE_T;
 									}
+									$$.place = expMakeBinOp1($1.place, $3.place, $2.value);
 									$$.lineno = $1.lineno;
 									//cout<<"exp -> exp BINOP1 exp"<<endl;
 								}
@@ -351,17 +354,21 @@ exp
 									} else {
 										$$.type = BYTE_T;
 									}
+									$$.place = expMakeBinOp2($1.place,$3.place,$2.value);
 									$$.lineno = $1.lineno;
+									
 									//cout<<"exp -> exp BINOP2 exp: $$ type type is: " << toCString($$.type)<<endl;
 								}
 	| NUM 						{
 									$$.type = INT_T;
 									$$.lineno = $1.lineno;
+									$$.place = expInit ($1.value);
 									free($1.value);
 									//cout<<"exp -> num"<<endl;
 								}
 	| LPAREN exp RPAREN 		{
 									$$.type = $2.type;
+									$$.place = $2.place;
 									//cout<<"exp -> LPAREN exp RPAREN"<<endl;
 								}
 	| NOT exp					{
@@ -457,6 +464,7 @@ exp
 									}
 									$$.type = BYTE_T;
 									$$.lineno = $1.lineno;
+									$$.place = expInit ($1.value);
 									free($1.value);
 									//cout<<"exp -> NUM B"<<endl;
 								}
@@ -582,22 +590,24 @@ int main()
 {
 	yyparse();
 	try{
-							TYPE typeTemp = symbolTable.checkFuncTypeAndArgs("main", NULL,0);
-							if (typeTemp != VOID_T){
-								errorMainMissing();
-								exit(1);
-							}
-						}
-						catch (errorUndefFuncException& e){
-							errorMainMissing();
-							exit(1);
-						}
-						catch (errorPrototypeMismatchException& e){
-							errorMainMissing();
-							exit(1);
-						}
-						symbolTable.removeGlobalScope();
-						//cout<<"program -> funcs"<<endl;
+		TYPE typeTemp = symbolTable.checkFuncTypeAndArgs("main", NULL,0);
+		if (typeTemp != VOID_T){
+			errorMainMissing();
+			exit(1);
+		}
+	}
+	catch (errorUndefFuncException& e){
+		errorMainMissing();
+		exit(1);
+	}
+	catch (errorPrototypeMismatchException& e){
+		errorMainMissing();
+		exit(1);
+	}
+	symbolTable.removeGlobalScope();
+	CodeBuffer::instance().printCodeBuffer();
+	
+	//cout<<"program -> funcs"<<endl;
 }
 
 void yyerror(char* message)

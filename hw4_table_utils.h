@@ -7,6 +7,9 @@
 #include <exception>
 #include <assert.h>
 #include <algorithm>
+#include "RegPool.h"
+
+
 using std::vector;
 using std::string;
 using  namespace output;
@@ -25,6 +28,7 @@ struct newYystype
 	char * idName;
 	int lineno;
 	int seenReturn;
+	REG place;
 };
 typedef struct newYystype  YYSTYPE;
 #define YYSTYPE_IS_DECLARED = 1

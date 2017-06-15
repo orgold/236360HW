@@ -6,13 +6,16 @@
 using std::string;
 using std::map;
 
+enum REG {t0,t1,t2,t3,t4,t5,t6,t7,t8,t9,s0,s1,s2,s3,s4,s5,s6,s7,invalidReg} ;
+
 class RegPool {
-map<string,bool> pool;
+map<REG,bool> pool;
 
 public:
+	static string  regToString(REG);
 	RegPool();
-	const string getReg();
-	void freeReg(const string&);
+	REG getReg();
+	void freeReg(REG);
 };
 
 #endif

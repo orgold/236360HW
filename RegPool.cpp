@@ -1,33 +1,57 @@
 #include "RegPool.h"
-
+#include <assert.h>
 
 RegPool::RegPool()
 {
 	for(int i=0;i<18;i++)
-	{
-		string name = (i<10) ? "t" : "s";
-		int index = (i<10) i : i -10;
-		pool["$"+name+string(index)] = false;
-			
-	}
+		pool[REG(i)] = false;
 }
 
-const string RegPool::getReg()
+ REG RegPool::getReg()
 {
-	for(map<string,bool>::iterator& ite=pool.begin(); ite != pool.end();ite++)
+	for(map<REG,bool>::iterator ite=pool.begin(); ite != pool.end();ite++)
 	{
 		if(false == ite->second)
 		{
 			pool[ite->first]= true;
 			return ite->first;
 		}
-		
-		assert(false);
-		return "";
 	}
+	assert(false);
+	return invalidReg;
 }
 
-void RegPool::freeReg(const string& regKey)
+void RegPool::freeReg(REG regKey)
 {
 	pool[regKey] = false;
+}
+
+string  RegPool::regToString(REG reg)
+{
+	switch(reg)
+	{
+		case(t0): return "$t0";
+		case(t1): return "$t1";
+		case(t2): return "$t2";
+		case(t3): return "$t3";
+		case(t4): return "$t4";
+		case(t5): return "$t5";
+		case(t6): return "$t6";
+		case(t7): return "$t7";
+		case(t8): return "$t8";
+		case(t9): return "$t9";
+		case(s0): return "$s0";
+		case(s1): return "$s1";
+		case(s2): return "$s2";
+		case(s3): return "$s3";
+		case(s4): return "$s4";
+		case(s5): return "$s5";
+		case(s6): return "$s6";
+		case(s7): return "$s7";
+		default : return "";
+	}
+	
+	
+	
+	
 }
