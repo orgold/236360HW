@@ -29,6 +29,10 @@ struct newYystype
 	int lineno;
 	int seenReturn;
 	REG place;
+	vector<int>* trueList;
+	vector<int>* falseList;
+	char* nextInst;
+	
 };
 typedef struct newYystype  YYSTYPE;
 #define YYSTYPE_IS_DECLARED = 1

@@ -1,5 +1,6 @@
 #include "semantic_utils.h"
 #include <cstdlib>
+#include <assert.h>
 REG expInit(char* value)
 {
 	REG regName = regPool.getReg();
@@ -43,6 +44,39 @@ REG expMakeBinOp2(REG exp1,REG exp2,char* op)
 	free(op);
 	return exp1;
 }
+
+void expMakeRelOp2(REG place1, REG place2 ,string op, vector<int>** trueList,vector<int>** falseList){
+	string jumpOp;
+	if(op == "<=")
+		jumpOp = "ble ";
+	else if (op == "<")
+		jumpOp = "blt ";
+	else if (op == ">=")
+		jumpOp = "bge ";
+	else if (op == ">")
+		jumpOp = "bgt ";
+	else if (op == "!=")
+		jumpOp = "bne ";
+	else if (op == "==")
+		jumpOp = "beq ";
+	else assert(false);//should never happen
+	
+	/*
+	so op should look somthing like:
+	beq $t1, $t2, _ <---command is trueList value
+	b _				<---command is falseList value
+	*/
+	
+	jumpOp += RegPool::regToString(place1) + ", " + RegPool::regToString(place1) + ", ";
+	int trueTargetInst = CodeBuffer::instance().emit(jumpOp);
+	vector<int> tempTrueList = CodeBuffer::makelist(trueTargetInst);
+	*trueList = new vector<int>(tempTrueList.begin(),tempTrueList.end());
+	
+	int falseTargetInst = CodeBuffer::instance().emit("b ");//else
+	vector<int> tempFalseList = CodeBuffer::makelist(falseTargetInst);
+	*falseList = new vector<int>(tempFalseList.begin(),tempFalseList.end());
+}
+
 
 void insert_printi(){
 	CodeBuffer::instance().emit("printi:");

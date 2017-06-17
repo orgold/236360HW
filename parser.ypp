@@ -1,6 +1,7 @@
 %{
 	#include <iostream>
 	#include <stdlib.h>
+	#include <cstring>
 	#include "hw4_table_utils.h"
 	#include "semantic_utils.h"
 	using namespace std;
@@ -370,6 +371,9 @@ exp
 	| LPAREN exp RPAREN 		{
 									$$.type = $2.type;
 									$$.place = $2.place;
+									//if boolean, need to keep track of lists
+									$$.trueList  = $2.trueList;
+									$$.falseList = $2.falseList;
 									//cout<<"exp -> LPAREN exp RPAREN"<<endl;
 								}
 	| NOT exp					{
@@ -379,38 +383,67 @@ exp
 									}
 									$$.type = BOOL_T;
 									$$.lineno = $1.lineno;
+									//insert to asm
+									$$.trueList  = $2.falseList;
+									$$.falseList = $2.trueList;
 									//cout<<"exp -> NOT exp"<<endl;
 								}
-	| exp AND exp 				{
+	| exp AND M exp 			{
 									if( $1.type != BOOL_T ||
-										$3.type != BOOL_T)
+										$4.type != BOOL_T)
 									{
 										errorMismatch($1.lineno);
 										exit(1);
 									}
 									$$.type = BOOL_T;
 									$$.lineno = $1.lineno;
+									//insert asm
+									CodeBuffer::instance().bpatch(*($1.trueList),$3.nextInst);
+									delete $1.trueList;
+									vector<int> listMerge = CodeBuffer::merge(*$1.falseList,*$4.falseList);
+									$$.falseList = new vector<int>(listMerge.begin(),listMerge.end());
+									delete $1.falseList;
+									delete $4.falseList;
+									$$.trueList = $4.trueList;
 									//cout<<"exp -> exp AND exp"<<endl;
 								}
-	| exp OR exp 				{
+	| exp OR M exp 				{
 									if( $1.type != BOOL_T ||
-										$3.type != BOOL_T)
+										$4.type != BOOL_T)
 									{
 										errorMismatch($1.lineno);
 										exit(1);
 									}
 									$$.type = BOOL_T;
 									$$.lineno = $1.lineno;
+									//insert asm
+									CodeBuffer::instance().bpatch(*($1.falseList),$3.nextInst);
+									delete $1.falseList;
+									vector<int> listMerge = CodeBuffer::merge(*$1.trueList,*$4.trueList);
+									$$.trueList = new vector<int>(listMerge.begin(),listMerge.end());
+									delete $1.trueList;
+									delete $4.trueList;
+									$$.falseList = $4.falseList;
 									//cout<<"exp -> exp OR exp"<<endl;
 								}
 	| TRUE						{
 									$$.type=BOOL_T;
 									$$.lineno = $1.lineno;
+									//insert to asm
+									int asmLineNo =  CodeBuffer::instance().emit("b ");
+									vector<int> tmpTrueList = CodeBuffer::makelist(asmLineNo);
+									$$.trueList = new vector<int>(tmpTrueList.begin(),tmpTrueList.end());
+									$$.falseList = NULL;
 									//cout<<"exp -> TRUE"<<endl;
 								}
 	| FALSE 					{
 									$$.type=BOOL_T;
 									$$.lineno = $1.lineno;
+									//insert to asm
+									int asmLineNo =  CodeBuffer::instance().emit("b ");
+									vector<int> tmpTrueList = CodeBuffer::makelist(asmLineNo);
+									$$.falseList = new vector<int>(tmpTrueList.begin(),tmpTrueList.end());
+									$$.trueList = NULL;
 									//cout<<"exp -> FALSE"<<endl;
 								}
 	| exp RELOP1 exp 			{
@@ -424,6 +457,8 @@ exp
 									}
 									$$.type = BOOL_T;
 									$$.lineno = $1.lineno;
+									//insert asm
+									expMakeRelOp2($1.place,$3.place,$2.value,&($$.trueList),&($$.falseList));
 									//cout<<"exp -> exp RELOP1 exp"<<endl;
 								}
 	| exp RELOP2 exp 			{
@@ -437,6 +472,8 @@ exp
 									}
 									$$.type = BOOL_T;
 									$$.lineno = $1.lineno;
+									//insert asm
+									expMakeRelOp2($1.place,$3.place,$2.value,&($$.trueList),&($$.falseList));
 									//cout<<"exp -> exp RELOP2 exp"<<endl;
 								}
 	| STRING 					{
@@ -585,6 +622,11 @@ rettype
 								$$.type=VOID_T;
 								//cout<<"rettype -> VOID"<<endl;
 								}
+
+M:							{
+								string nextLabel = CodeBuffer::instance().next();
+								$$.nextInst = strdup(nextLabel.c_str());
+							}								
 %%
 
 int main()

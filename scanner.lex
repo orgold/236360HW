@@ -55,10 +55,12 @@ void allocate_value();
 \}					return handle_default();
 [ \t\n\r]			;
 "=="|"!="			{
+						allocate_value();
 						yylval.lineno=yylineno;
 						return RELOP2;
 					}
 "<"|">"|"<="|">="	{
+						allocate_value();
 						yylval.lineno=yylineno;
 						return RELOP1;
 					}
