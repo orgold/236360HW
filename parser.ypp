@@ -591,6 +591,7 @@ int main()
 {
 	insert_printi();
 	insert_print();
+	insert_div0error();
 	yyparse();
 	try{
 		TYPE typeTemp = symbolTable.checkFuncTypeAndArgs("main", NULL,0);
@@ -608,6 +609,7 @@ int main()
 		exit(1);
 	}
 	symbolTable.removeGlobalScope();
+	CodeBuffer::instance().printDataBuffer();
 	CodeBuffer::instance().printCodeBuffer();
 	
 	//cout<<"program -> funcs"<<endl;

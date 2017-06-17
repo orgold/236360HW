@@ -13,7 +13,10 @@ REG expMakeBinOp1(REG exp1,REG exp2,char* op){
 		mipsOp = "mult";
 	}
 	else{// op = "/"
-		//TODO put code to verify exp2 not 0
+		REG tmp0Reg = regPool.getReg();
+		CodeBuffer::instance().emit("lw " + RegPool::regToString(tmp0Reg) + ", 0");
+		CodeBuffer::instance().emit("beq " +RegPool::regToString(tmp0Reg) + ", " + RegPool::regToString(exp2) + ", div0error");
+		regPool.freeReg(tmp0Reg);
 		mipsOp = "div";
 	}
 	CodeBuffer::instance().emit(mipsOp + " " + RegPool::regToString(exp1) + ", " + RegPool::regToString(exp2));
@@ -52,7 +55,17 @@ void insert_printi(){
 void insert_print(){
 	CodeBuffer::instance().emit("print:");
 	CodeBuffer::instance().emit("lw $a0,0($sp)");
-	 CodeBuffer::instance().emit("li $v0,0");
-	 CodeBuffer::instance().emit("syscall");
-	 CodeBuffer::instance().emit("jr $ra");
+	CodeBuffer::instance().emit("li $v0,4");
+	CodeBuffer::instance().emit("syscall");
+	CodeBuffer::instance().emit("jr $ra");
+}
+
+void insert_div0error(){
+	CodeBuffer::instance().emitData("div0errormsg: .asciiz Error division by zero\n");
+	CodeBuffer::instance().emit("div0error:");
+	CodeBuffer::instance().emit("la $a0,div0errormsg");
+	CodeBuffer::instance().emit("li $v0,4");
+	CodeBuffer::instance().emit("syscall");
+	CodeBuffer::instance().emit("li $v0,10");
+	CodeBuffer::instance().emit("syscall");
 }
