@@ -1,0 +1,3 @@
+void main(){
+	bool a = 5>3 or 2<1 and false;
+}

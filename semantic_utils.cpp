@@ -67,7 +67,7 @@ void expMakeRelOp2(REG place1, REG place2 ,string op, vector<int>** trueList,vec
 	b _				<---command is falseList value
 	*/
 	
-	jumpOp += RegPool::regToString(place1) + ", " + RegPool::regToString(place1) + ", ";
+	jumpOp += RegPool::regToString(place1) + ", " + RegPool::regToString(place2) + ", ";
 	int trueTargetInst = CodeBuffer::instance().emit(jumpOp);
 	vector<int> tempTrueList = CodeBuffer::makelist(trueTargetInst);
 	*trueList = new vector<int>(tempTrueList.begin(),tempTrueList.end());
