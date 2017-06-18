@@ -52,8 +52,8 @@ void SymbolTable::insertScope()
 void SymbolTable::removeScope()
 {
 	assert(scopeStack.size() != 0);
-	endScope();
-	scopeStack.back().sendToPrint();
+	//endScope();
+	//scopeStack.back().sendToPrint();
 	scopeStack.pop_back();
 }
 
@@ -126,8 +126,8 @@ SymbolTable::~SymbolTable()
 
 void SymbolTable::removeGlobalScope()
 {	
-	endScope();
-	for (std::vector<string>::iterator ite=funcsByOrderArrival.begin();ite!=funcsByOrderArrival.end();ite++)
+	//endScope();
+	/*for (std::vector<string>::iterator ite=funcsByOrderArrival.begin();ite!=funcsByOrderArrival.end();ite++)
 	{
 		vector<const char*> arrangeForPrint(functionMap[*ite].paramTypeList.size());
 		std::transform(
@@ -141,7 +141,7 @@ void SymbolTable::removeGlobalScope()
 			0,
 			(makeFunctionType(toCString(functionMap[*ite].returnType),arrangeForPrint)).c_str()
 		);
-	}
+	}*/
 }
 
 void SymbolTable::coverInsertFunction(const string& name,TYPE* typeList,int paramNum, TYPE retType, char** paramNames)
