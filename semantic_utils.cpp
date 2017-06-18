@@ -15,7 +15,7 @@ REG expMakeBinOp1(REG exp1,REG exp2,char* op){
 	}
 	else{// op = "/"
 		REG tmp0Reg = regPool.getReg();
-		CodeBuffer::instance().emit("lw " + RegPool::regToString(tmp0Reg) + ", 0");
+		CodeBuffer::instance().emit("li " + RegPool::regToString(tmp0Reg) + ", 0");
 		CodeBuffer::instance().emit("beq " +RegPool::regToString(tmp0Reg) + ", " + RegPool::regToString(exp2) + ", div0error");
 		regPool.freeReg(tmp0Reg);
 		mipsOp = "div";
@@ -95,7 +95,7 @@ void insert_print(){
 }
 
 void insert_div0error(){
-	CodeBuffer::instance().emitData("div0errormsg: .asciiz Error division by zero\n");
+	CodeBuffer::instance().emitData("div0errormsg: .asciiz \"Error division by zero\\n\"");
 	CodeBuffer::instance().emit("div0error:");
 	CodeBuffer::instance().emit("la $a0,div0errormsg");
 	CodeBuffer::instance().emit("li $v0,4");
