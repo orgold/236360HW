@@ -1,0 +1,5 @@
+void main(){
+    int i = 50;
+    int x = i - 40;
+    int z = x*x;
+}

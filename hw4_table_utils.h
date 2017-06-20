@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <algorithm>
 #include "RegPool.h"
+#include "bp.hpp"
 
 
 using std::vector;
@@ -127,6 +128,7 @@ public:
 	{
 		return nameToData[name].type;
 	}
+	int getPosition(string name) { return nameToData[name].position; }
 #ifdef DEBUG
 	void print()
 	{
@@ -140,6 +142,16 @@ public:
 		}
 	}
 #endif //DEBUG
+
+	size_t getNumOfNonArgumentSymbolsInScope() {
+		size_t cnt = 0;
+		for(std::map<string,VarEntryData>::iterator it = nameToData.begin(); it != nameToData.end(); it++){
+			if(it->second.position >= 0)
+				cnt++;
+		}
+		return cnt;
+	}
+	
 };
 
 struct FunctionData
@@ -168,6 +180,7 @@ public:
 	//getPosition(name);
 	TYPE getType(string name);
 	void removeGlobalScope();
+	int getPosition(string name);
 #ifdef DEBUG
 	void print()
 	{

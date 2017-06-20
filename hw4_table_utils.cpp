@@ -1,5 +1,5 @@
 #include "hw4_table_utils.h"
-
+#include <sstream>
 
 const char* toCString(TYPE type)
 {
@@ -54,6 +54,11 @@ void SymbolTable::removeScope()
 	assert(scopeStack.size() != 0);
 	//endScope();
 	//scopeStack.back().sendToPrint();
+	size_t numOfVars = scopeStack.back().getNumOfNonArgumentSymbolsInScope();
+	size_t sizeOfVarsOnStack = numOfVars*4;
+	std::ostringstream ostr;
+	ostr << sizeOfVarsOnStack;
+	CodeBuffer::instance().emit("addu $sp, $sp, " + ostr.str());
 	scopeStack.pop_back();
 }
 
@@ -64,6 +69,7 @@ void SymbolTable::insertVar(const string& name, TYPE type)
 	checkNameNotDefinedAsVar(name);
 	assert(scopeStack.size() != 0);
 	scopeStack.back().insertVar(name, type);
+	CodeBuffer::instance().emit("subu $sp, $sp, 4");//make room for new var. All vars are of size 4 bytes.
 }
 
 void SymbolTable::checkNameNotDefinedAsFunction(const string& name)
@@ -101,6 +107,15 @@ TYPE SymbolTable::getType(string name)
 	{
 		if(sTable->isVarInScope(name))
 			return sTable->getType(name);
+	}
+	throw errorUndefException(name);
+}
+int SymbolTable::getPosition(string name)
+{
+	for(std::vector<ScopeTable>::iterator sTable = scopeStack.begin() ; sTable!= scopeStack.end();sTable++)
+	{
+		if(sTable->isVarInScope(name))
+			return sTable->getPosition(name);
 	}
 	throw errorUndefException(name);
 }

@@ -1,6 +1,8 @@
 #include "semantic_utils.h"
 #include <cstdlib>
 #include <assert.h>
+#include <sstream>
+
 REG expInit(char* value)
 {
 	REG regName = regPool.getReg();
@@ -76,6 +78,33 @@ void expMakeRelOp2(REG place1, REG place2 ,string op, vector<int>** trueList,vec
 	vector<int> tempFalseList = CodeBuffer::makelist(falseTargetInst);
 	*falseList = new vector<int>(tempFalseList.begin(),tempFalseList.end());
 }
+
+void moveValueInVar (string varName, REG valPlace)
+{
+	int pos = symbolTable.getPosition(varName);
+	int offFromFP = pos*4;
+	std::ostringstream ostr;
+	ostr << offFromFP;
+	CodeBuffer::instance().emit("sw " + RegPool::regToString(valPlace) + ", " + ostr.str() +"($fp)");
+	regPool.freeReg(valPlace);
+}
+
+REG loadValueFromVar (string varName)
+{
+	int pos = symbolTable.getPosition(varName);
+	int offFromFP = pos*4;
+	REG dest = regPool.getReg();
+	std::ostringstream ostr;
+	ostr << offFromFP;
+	CodeBuffer::instance().emit("lw " + RegPool::regToString(dest) + ", " + ostr.str() +"($fp)");
+	return dest;
+}
+
+void initFP()
+{	
+	CodeBuffer::instance().emit("subu $fp, $sp, 4");
+}
+
 
 
 void insert_printi(){

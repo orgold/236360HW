@@ -225,8 +225,11 @@ simplestatement
 										errorMismatch($2.lineno);
 										exit(1);
 									}
+									moveValueInVar($2.idName, $4.place);
+									//done
 									if(globalIsDeclSensitive)
 										symbolTable.removeScope();
+									
 									free($2.idName);
 									$$.lineno = $2.lineno;
 									$$.hasBreak =0;
@@ -243,9 +246,11 @@ simplestatement
 									}
 									catch(errorUndefException& e)
 									{
-											errorUndef($1.lineno,$1.idName);
-											exit(1);
+										errorUndef($1.lineno,$1.idName);
+										exit(1);
 									}
+									moveValueInVar($1.idName, $4.place);
+									free($1.idName);
 									$$.hasBreak =0;
 									//cout<<"simplestatement -> ID ASSIGN exp SC"<<endl;
 								}
@@ -303,6 +308,7 @@ fundecl
 fundecl_helper 
 	: rettype ID LPAREN formals   	{
 										CodeBuffer::instance().emit(string($2.idName) + ":");
+										initFP();
 										try {
 											symbolTable.coverInsertFunction($2.idName,$4.typeList,$4.typeListSize,$1.type,$4.idList);
 										}
@@ -491,6 +497,7 @@ exp
 									errorUndef($$.lineno,e.id.c_str()); 
 									exit(1);
 								}
+								$$.place = loadValueFromVar($1.idName);
 								//cout<<"exp -> ID: " << $1.idName << " of type: " << toCString($$.type) <<endl;
 								free($1.idName);
 								}
