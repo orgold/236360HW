@@ -209,6 +209,15 @@ simplestatement
 									//cout<<"simplestatement -> type ID SC"<<endl;
 								}
 	| type ID ASSIGN exp SC 	{
+									if( $1.type!= $4.type &&
+									  !($1.type==INT_T&&$4.type==BYTE_T)) 
+									{
+										errorMismatch($2.lineno);
+										exit(1);
+									}
+									REG valPlace = $4.place;
+									if($1.type == BOOL_T && NULL != $4.trueList)
+										valPlace = putSetRegCode($4.trueList,$4.falseList);
 									if(globalIsDeclSensitive)
 										symbolTable.insertScope();
 									try{
@@ -219,13 +228,7 @@ simplestatement
 										errorDef($2.lineno,e.id.c_str());
 										exit(1);
 									}
-									if( $1.type!= $4.type &&
-									  !($1.type==INT_T&&$4.type==BYTE_T)) 
-									{
-										errorMismatch($2.lineno);
-										exit(1);
-									}
-									moveValueInVar($2.idName, $4.place);
+									moveValueInVar($2.idName, valPlace);
 									//done
 									if(globalIsDeclSensitive)
 										symbolTable.removeScope();
@@ -243,13 +246,17 @@ simplestatement
 											errorMismatch($2.lineno);
 											exit(1);
 										}
+										REG valPlace = $3.place;
+										if(tempType == BOOL_T && NULL != $3.trueList)
+											valPlace = putSetRegCode($3.trueList,$3.falseList);
+										moveValueInVar($1.idName, valPlace);
 									}
 									catch(errorUndefException& e)
 									{
 										errorUndef($1.lineno,$1.idName);
 										exit(1);
 									}
-									moveValueInVar($1.idName, $4.place);
+									
 									free($1.idName);
 									$$.hasBreak =0;
 									//cout<<"simplestatement -> ID ASSIGN exp SC"<<endl;
@@ -498,6 +505,8 @@ exp
 									exit(1);
 								}
 								$$.place = loadValueFromVar($1.idName);
+								$$.trueList = NULL;
+								$$.falseList = NULL;
 								//cout<<"exp -> ID: " << $1.idName << " of type: " << toCString($$.type) <<endl;
 								free($1.idName);
 								}

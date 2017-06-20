@@ -77,6 +77,9 @@ void expMakeRelOp2(REG place1, REG place2 ,string op, vector<int>** trueList,vec
 	int falseTargetInst = CodeBuffer::instance().emit("b ");//else
 	vector<int> tempFalseList = CodeBuffer::makelist(falseTargetInst);
 	*falseList = new vector<int>(tempFalseList.begin(),tempFalseList.end());
+	
+	regPool.freeReg(place1);
+	regPool.freeReg(place2);
 }
 
 void moveValueInVar (string varName, REG valPlace)
@@ -103,6 +106,29 @@ REG loadValueFromVar (string varName)
 void initFP()
 {	
 	CodeBuffer::instance().emit("subu $fp, $sp, 4");
+}
+
+REG putSetRegCode(vector<int>* trueList, vector<int>* falseList)
+{
+	CodeBuffer& cbuff = CodeBuffer::instance();
+	REG valPlace = regPool.getReg();
+	string trueLabel = cbuff.next();
+	cbuff.emit("li " + RegPool::regToString(valPlace) + ", 1");
+	int branchPoint = cbuff.emit("b ");
+	string falseLabel = cbuff.next();
+	cbuff.emit("li " + RegPool::regToString(valPlace) + ", 0");
+	string branchTarget = cbuff.next();
+	cbuff.bpatch(CodeBuffer::makelist(branchPoint), branchTarget);
+	
+	//patch all lists.
+	cbuff.bpatch(*trueList, trueLabel);
+	cbuff.bpatch(*falseList, falseLabel);
+	
+	//cleanups
+	delete trueList;
+	delete falseList;
+	
+	return valPlace;
 }
 
 

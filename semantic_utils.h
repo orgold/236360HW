@@ -14,6 +14,7 @@ void expMakeRelOp2(REG place1, REG place2 ,string op, vector<int>** trueList,vec
 void moveValueInVar (string varName, REG valPlace);
 REG loadValueFromVar (string varName);//oposite of moveValueInVar
 void initFP();
+REG putSetRegCode(vector<int>* trueList, vector<int>* falseList);
 
 //insert functions inst-by-inst
 void insert_print();
