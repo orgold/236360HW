@@ -433,7 +433,7 @@ exp
 									int asmLineNo =  CodeBuffer::instance().emit("b ");
 									vector<int> tmpTrueList = CodeBuffer::makelist(asmLineNo);
 									$$.trueList = new vector<int>(tmpTrueList.begin(),tmpTrueList.end());
-									$$.falseList = NULL;
+									$$.falseList = new vector<int>(0);;
 									//cout<<"exp -> TRUE"<<endl;
 								}
 	| FALSE 					{
@@ -441,9 +441,9 @@ exp
 									$$.lineno = $1.lineno;
 									//insert to asm
 									int asmLineNo =  CodeBuffer::instance().emit("b ");
-									vector<int> tmpTrueList = CodeBuffer::makelist(asmLineNo);
-									$$.falseList = new vector<int>(tmpTrueList.begin(),tmpTrueList.end());
-									$$.trueList = NULL;
+									vector<int> tmpList = CodeBuffer::makelist(asmLineNo);
+									$$.falseList = new vector<int>(tmpList.begin(),tmpList.end());
+									$$.trueList = new vector<int>(0);
 									//cout<<"exp -> FALSE"<<endl;
 								}
 	| exp RELOP1 exp 			{
