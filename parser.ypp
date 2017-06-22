@@ -10,6 +10,7 @@
 	void yyerror(char * message);
 	SymbolTable symbolTable;
 	RegPool regPool;
+	whileStack while_stack;
 	TYPE globalFunctionRetType;
 	bool globalIsDeclSensitive = 0;
 	extern int yylineno;
@@ -97,33 +98,81 @@ statement
 MarkOn:  {globalIsDeclSensitive = true;}
 MarkOff: {globalIsDeclSensitive = false;}
 
-IfStart: IF LPAREN exp 			{if($3.type != BOOL_T){errorMismatch($1.lineno);exit(1);}}
+IfStart: IF LPAREN exp 			{
+								if($3.type != BOOL_T)
+									{
+										errorMismatch($1.lineno);
+										exit(1);
+									}
+									$$.trueList = $3.trueList;
+									$$.falseList = $3.falseList;
+								}
 
-WhileStart : WHILE LPAREN exp {if($3.type != BOOL_T){errorMismatch($1.lineno);exit(1);}}
+WhileStart : WHILE M LPAREN exp {
+
+								if($4.type != BOOL_T)
+								{
+									errorMismatch($1.lineno);
+									exit(1);
+								}
+
+								while_stack.addVector();
+								$$.trueList = $4.trueList;
+								$$.falseList = $4.falseList;
+								$$.nextInst = $2.nextInst;
+							}
 
 openstatement
-	: IfStart RPAREN MarkOn statement MarkOff			{
-																$$.hasBreak = $4.hasBreak;
-																$$.lineno = $4.lineno;
-																//cout<<"openstatement -> IF LPAREN exp RPAREN statement"<<endl;
-															}
+	: IfStart RPAREN MarkOn M statement MarkOff			{
+																
+															CodeBuffer::instance().bpatch(*($1.trueList),$4.nextInst);
+															delete $1.trueList;
+															free($4.nextInst);
+															string nextLabel = CodeBuffer::instance().next();
+															CodeBuffer::instance().bpatch(*($1.falseList),nextLabel);
+															delete $1.falseList;
+															$$.hasBreak = $5.hasBreak;
+															$$.lineno = $5.lineno;
+															//cout<<"openstatement -> IF LPAREN exp RPAREN statement"<<endl;
+														}
 
-	| IfStart RPAREN MarkOn closedstatement MarkOff ELSE MarkOn openstatement MarkOff	
+	| IfStart RPAREN MarkOn M closedstatement MarkOff ELSE MarkOn N M  openstatement MarkOff	
 		{
-			if($4.hasBreak)
+			
+			CodeBuffer::instance().bpatch(*($1.trueList),$4.nextInst);
+			delete $1.trueList;
+			free($4.nextInst);
+			CodeBuffer::instance().bpatch(*($1.falseList),$9.nextInst);
+			delete $1.falseList;
+			free($9.nextInst);
+
+			string nextLabel = CodeBuffer::instance().next();
+			CodeBuffer::instance().bpatch(CodeBuffer::makelist($8.asmLineNo),nextLabel);
+
+			if($5.hasBreak)
 				{
 					$$.hasBreak=1;
-					$$.lineno = $4.lineno;
+					$$.lineno = $5.lineno;
 				}
 				else 
 				{
-					$$.hasBreak=$7.hasBreak;
-					$$.lineno = $7.lineno;
+					$$.hasBreak=$11.hasBreak;
+					$$.lineno = $11.lineno;
 				}
 			//cout<<"openstatement -> IF LPAREN exp RPAREN closedstatement ELSE openstatement"<<endl;
 		}
-	| WhileStart RPAREN MarkOn openstatement MarkOff		{
+	| WhileStart RPAREN MarkOn M openstatement MarkOff N M 		{
 																	$$.hasBreak = 0;
+																	CodeBuffer::instance().bpatch(*($1.trueList),$4.nextInst);
+																	delete $1.trueList;
+																	free($4.nextInst);
+
+																	CodeBuffer::instance().bpatch(*($1.falseList),$8.nextInst);
+																	delete $1.falseList;
+																	while_stack.removeVector($8.nextInst);
+																	CodeBuffer::instance().bpatch(CodeBuffer::makelist($7.asmLineNo),$1.nextInst);
+																	free($1.nextInst);
+																	free($8.nextInst);
 																	//cout<<"openstatement -> WHILE LPAREN exp RPAREN openstatement"<<endl;
 																}
 
@@ -133,21 +182,39 @@ closedstatement
 																	$$.lineno = $1.lineno;
 																	//cout<<"closedstatement -> simplestatement"<<endl;
 																}
-	| IfStart RPAREN MarkOn closedstatement MarkOff ELSE MarkOn closedstatement MarkOff
+	| IfStart RPAREN MarkOn M closedstatement MarkOff ELSE MarkOn N M closedstatement MarkOff
 		{
-			if($4.hasBreak)
+			CodeBuffer::instance().bpatch(*($1.trueList),$4.nextInst);
+			delete $1.trueList;
+			free($4.nextInst);
+			CodeBuffer::instance().bpatch(*($1.falseList),$10.nextInst);
+			delete $1.falseList;
+			free($10.nextInst);
+			string nextLabel = CodeBuffer::instance().next();
+			CodeBuffer::instance().bpatch(CodeBuffer::makelist($9.asmLineNo),nextLabel);
+
+			if($5.hasBreak)
 			{
 				$$.hasBreak=1;
-				$$.lineno = $4.lineno;
+				$$.lineno = $5.lineno;
 			}
 			else 
 			{
-				$$.hasBreak=$7.hasBreak;
-				$$.lineno = $7.lineno;
+				$$.hasBreak=$11.hasBreak;
+				$$.lineno = $11.lineno;
 			}
 			//cout<<"closedstatement -> IF LPAREN exp RPAREN closedstatement ELSE closedstatement"<<endl;
 		}
-	| WhileStart RPAREN MarkOn closedstatement MarkOff	{
+	| WhileStart RPAREN MarkOn M closedstatement MarkOff N M	{
+																	CodeBuffer::instance().bpatch(*($1.trueList),$4.nextInst);
+																	delete $1.trueList;
+																	free($4.nextInst);
+																	CodeBuffer::instance().bpatch(*($1.falseList),$8.nextInst);
+																	delete $1.falseList;
+																	while_stack.removeVector($8.nextInst);
+																	CodeBuffer::instance().bpatch(CodeBuffer::makelist($7.asmLineNo),$1.nextInst);
+																	free($1.nextInst);
+																	free($8.nextInst);
 																	$$.hasBreak = 0;
 																	//cout<<"closedstatement -> WHILE LPAREN exp RPAREN closedstatement"<<endl;
 																}
@@ -289,6 +356,7 @@ simplestatement
 	| BREAK SC 					{	
 									$$.hasBreak = true;
 									$$.lineno = $1.lineno;
+									while_stack.addAddress();
 									//cout<<"simplestatement -> BREAK SC"<<endl;
 								}
 	| LBRACE {symbolTable.insertScope(); globalIsDeclSensitive=false;} statements RBRACE 	
@@ -642,6 +710,9 @@ rettype
 M:							{
 								string nextLabel = CodeBuffer::instance().next();
 								$$.nextInst = strdup(nextLabel.c_str());
+							}
+N:							{
+							$$.asmLineNo =  CodeBuffer::instance().emit("b ");
 							}								
 %%
 

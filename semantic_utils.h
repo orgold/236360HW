@@ -1,9 +1,9 @@
 #include "RegPool.h"
 #include "bp.hpp"
 #include "hw4_table_utils.h"
-
 #include <vector>
 using std::vector;
+using std::pair;
 
 extern RegPool regPool;
 extern SymbolTable symbolTable;
@@ -20,3 +20,13 @@ REG putSetRegCode(vector<int>* trueList, vector<int>* falseList);
 void insert_print();
 void insert_printi();
 void insert_div0error();
+
+class whileStack{
+vector<pair<int,vector<int> > > _whileStack;
+public:
+	whileStack();
+	void addVector();
+	void removeVector(string label);
+	void addAddress();
+
+};

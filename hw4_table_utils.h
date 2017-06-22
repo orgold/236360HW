@@ -33,6 +33,7 @@ struct newYystype
 	vector<int>* trueList;
 	vector<int>* falseList;
 	char* nextInst;
+	int asmLineNo;
 	
 };
 typedef struct newYystype  YYSTYPE;
@@ -92,9 +93,8 @@ class ScopeTable
 	std::map<string,VarEntryData> nameToData;
 	int currentOffset;
 	
-	
 public:
-	ScopeTable(int currentOffset) : currentOffset(currentOffset) {}
+	ScopeTable(int currentOffset,bool isWhile = false) : currentOffset(currentOffset) {}
 	ScopeTable(const ScopeTable& st) : 
 		orderIdsByArrival(st.orderIdsByArrival),nameToData(st.nameToData), currentOffset (st.currentOffset) {}
 	bool isVarInScope(const string& name)
@@ -143,11 +143,10 @@ public:
 	}
 #endif //DEBUG
 
-	size_t getNumOfNonArgumentSymbolsInScope() {
+	size_t getNumOfSymbolsInScope() {
 		size_t cnt = 0;
 		for(std::map<string,VarEntryData>::iterator it = nameToData.begin(); it != nameToData.end(); it++){
-			if(it->second.position >= 0)
-				cnt++;
+			cnt++;
 		}
 		return cnt;
 	}
@@ -181,6 +180,8 @@ public:
 	TYPE getType(string name);
 	void removeGlobalScope();
 	int getPosition(string name);
+	size_t getStackSize();
+	size_t numOfVarsUpToScopeNumber(size_t scopeNumber);
 #ifdef DEBUG
 	void print()
 	{

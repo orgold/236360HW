@@ -1,4 +1,5 @@
 #include "semantic_utils.h"
+
 #include <cstdlib>
 #include <assert.h>
 #include <sstream>
@@ -157,4 +158,31 @@ void insert_div0error(){
 	CodeBuffer::instance().emit("syscall");
 	CodeBuffer::instance().emit("li $v0,10");
 	CodeBuffer::instance().emit("syscall");
+}
+
+
+whileStack::whileStack():_whileStack(0)
+{
+
+}
+
+void whileStack::addVector()
+{
+	_whileStack.push_back(make_pair(symbolTable.getStackSize(),vector<int>(0)));
+}
+
+
+void whileStack::addAddress()
+{
+	std::ostringstream ostr;
+	ostr << symbolTable.numOfVarsUpToScopeNumber(_whileStack.back().first)*4 ;
+	CodeBuffer::instance().emit("addi $sp, $sp, " + ostr.str());
+	int address = CodeBuffer::instance().emit("b  ");
+	_whileStack.back().second.push_back(address);
+}
+
+void whileStack::removeVector(string label)
+{
+	CodeBuffer::instance().bpatch(_whileStack.back().second,label);
+	_whileStack.pop_back();
 }

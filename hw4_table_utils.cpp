@@ -31,6 +31,7 @@ void SymbolTable::insertFunction(
 	insertScope();
 	for(int i = 0; i < paramTypes.size(); i++ ){
 		if (functionMap.find(paramNames[i]) != functionMap.end()){
+			std::cout<< paramNames[i] << "thrown for funcName" << std::endl;
 			throw errorDefException(paramNames[i]);
 		}
 		scopeStack.back().insertParam(
@@ -53,7 +54,7 @@ void SymbolTable::removeScope()
 	assert(scopeStack.size() != 0);
 	//endScope();
 	//scopeStack.back().sendToPrint();
-	size_t numOfVars = scopeStack.back().getNumOfNonArgumentSymbolsInScope();
+	size_t numOfVars = scopeStack.back().getNumOfSymbolsInScope();
 	size_t sizeOfVarsOnStack = numOfVars*4;
 	std::ostringstream ostr;
 	ostr << sizeOfVarsOnStack;
@@ -167,6 +168,23 @@ void SymbolTable::coverInsertFunction(const string& name,TYPE* typeList,int para
 		names.push_back(paramNames[i-1]);
 	}
 	insertFunction(name,types,retType, names);
+}
+
+size_t SymbolTable::getStackSize()
+{
+	return scopeStack.size();
+}
+size_t SymbolTable::numOfVarsUpToScopeNumber(size_t scopeNumber)
+{
+	size_t numOfVars = 0;
+	int numOfScopes = scopeStack.size() - scopeNumber;
+
+	for (int i = 0; i < numOfScopes ; ++i)
+	{
+		numOfVars += scopeStack[scopeStack.size() - i -1].getNumOfSymbolsInScope();
+	}
+
+	return numOfVars;
 }
 
 /*
