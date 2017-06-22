@@ -74,7 +74,10 @@ void allocate_value();
 
 
 \/\/[^\r\n]*[\r|\n|\r\n]?         ;
-.					errorLex(yylineno);
+.					{
+					errorLex(yylineno);
+					exit(1);
+					}
 
 %%
 int handle_default()

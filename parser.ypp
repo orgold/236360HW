@@ -321,7 +321,7 @@ fundecl_helper
 										}
 										catch(errorDefException& e)
 										{
-											errorDef($2.lineno,$2.idName);
+											errorDef($2.lineno,e.id.c_str());
 											exit(1);
 										}
 										globalFunctionRetType = $1.type;
