@@ -48,7 +48,13 @@ void SymbolTable::insertScope()
 		(scopeStack.size() == 0) ? 0 : scopeStack.back().getCurrentOffset();
 	scopeStack.push_back(ScopeTable(currentOffset));
 }
-
+void SymbolTable::functionCallCode()
+{
+	RegPool::saveAll();
+	CodeBuffer::instance().emit("subu $sp, $sp, 8");
+	//CodeBuffer::instance().emit("move 0($sp) , $ra"); place for ra. fundecl would asiign this plae to ra
+	CodeBuffer::instance().emit("sw  $fp, 4($sp)");
+}
 void SymbolTable::removeScope()
 {
 	assert(scopeStack.size() != 0);
@@ -61,7 +67,18 @@ void SymbolTable::removeScope()
 	CodeBuffer::instance().emit("addu $sp, $sp, " + ostr.str());
 	scopeStack.pop_back();
 }
-
+void SymbolTable::functionRemoveScope(int argSize)
+{
+	size_t sizeOfVarsOnStack = (argSize+1)*4;
+	std::ostringstream ostr;
+	ostr << sizeOfVarsOnStack;
+	CodeBuffer::instance().emit("addu $sp, $fp, " + ostr.str());
+	CodeBuffer::instance().emit("lw $ra, 0($sp)");
+	CodeBuffer::instance().emit("lw $fp, 4($sp)");
+	CodeBuffer::instance().emit("addu $sp, $sp, 8" );
+	RegPool::loadAll();
+	scopeStack.pop_back();
+}
 void SymbolTable::insertVar(const string& name, TYPE type)
 {
 	//check that it won't shadow

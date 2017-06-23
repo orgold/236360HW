@@ -50,8 +50,26 @@ string  RegPool::regToString(REG reg)
 		case(s7): return "$s7";
 		default : return "";
 	}
-	
-	
-	
-	
+}
+
+void RegPool::saveAll()
+{
+	CodeBuffer::instance().emit("subu $sp , $sp,72 ");
+
+	for(int i=0;i<18;i++)
+	{
+		std::ostringstream ostr;
+		ostr<< i*4;
+		CodeBuffer::instance().emit("sw " +regToString(REG(i))+", " + ostr.str()+  "($sp)");
+	}
+}
+void RegPool::loadAll()
+{
+	for(int i=0;i<18;i++)
+	{
+		std::ostringstream ostr;
+		ostr<< i*4;
+		CodeBuffer::instance().emit("lw "+regToString(REG(i))+ " ," +ostr.str()+  "($sp)");
+	}
+	CodeBuffer::instance().emit("addu $sp , $sp,72 ");
 }

@@ -3,7 +3,6 @@
 #include "hw4_table_utils.h"
 #include <vector>
 using std::vector;
-using std::pair;
 
 extern RegPool regPool;
 extern SymbolTable symbolTable;
@@ -15,7 +14,9 @@ void moveValueInVar (string varName, REG valPlace);
 REG loadValueFromVar (string varName);//oposite of moveValueInVar
 void initFP();
 REG putSetRegCode(vector<int>* trueList, vector<int>* falseList);
-
+void makeSwitchCode(REG expPlace, vector<pair<int,string> > caseStack, vector<int> nextList);
+void setRaOnStack(int argsSize);
+void pushArgsList(vector<REG> argsList);
 //insert functions inst-by-inst
 void insert_print();
 void insert_printi();

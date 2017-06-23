@@ -13,6 +13,7 @@
 	whileStack while_stack;
 	TYPE globalFunctionRetType;
 	bool globalIsDeclSensitive = 0;
+	vector<int> returnAdrressesBapatch(0);
 	extern int yylineno;
 %}
 
@@ -110,17 +111,17 @@ IfStart: IF LPAREN exp 			{
 
 WhileStart : WHILE M LPAREN exp {
 
-								if($4.type != BOOL_T)
-								{
-									errorMismatch($1.lineno);
-									exit(1);
-								}
+									if($4.type != BOOL_T)
+									{
+										errorMismatch($1.lineno);
+										exit(1);
+									}
 
-								while_stack.addVector();
-								$$.trueList = $4.trueList;
-								$$.falseList = $4.falseList;
-								$$.nextInst = $2.nextInst;
-							}
+									while_stack.addVector();
+									$$.trueList = $4.trueList;
+									$$.falseList = $4.falseList;
+									$$.nextInst = $2.nextInst;
+								}
 
 openstatement
 	: IfStart RPAREN MarkOn M statement MarkOff			{
@@ -218,14 +219,26 @@ closedstatement
 																	$$.hasBreak = 0;
 																	//cout<<"closedstatement -> WHILE LPAREN exp RPAREN closedstatement"<<endl;
 																}
-	| SWITCH LPAREN exp {if($3.type != BYTE_T && $3.type != INT_T){errorMismatch($1.lineno);exit(1);}} RPAREN LBRACE caselist RBRACE SC		{
-																	$$.hasBreak = $7.hasBreak;
-																	$$.lineno = $7.lineno;
-																	//cout<<"closedstatement -> SWITCH LPAREN exp RPAREN LBRACE caselist RBRACE SC"<<endl;
-																}
+	| SWITCH LPAREN exp {if($3.type != BYTE_T && $3.type != INT_T){errorMismatch($1.lineno);exit(1);}} N RPAREN LBRACE caselist RBRACE M SC		
+	{
+		CodeBuffer::instance().bpatch(CodeBuffer::makelist($5.asmLineNo),$10.nextInst);
+		makeSwitchCode($3.place, *($8.caseStack), *($8.nextList));
+		//cleanup:
+		regPool.freeReg($3.place);//TODO consider moving into marker, should not cause an issue.
+		delete $8.caseStack;
+		delete $8.nextList;
+		free($10.nextInst);
+
+		//handle break for while:
+		$$.hasBreak = $8.hasBreak;
+		$$.lineno = $8.lineno;
+		//cout<<"closedstatement -> SWITCH LPAREN exp RPAREN LBRACE caselist RBRACE SC"<<endl;
+	}
 
 caselist
 	: casestat					{
+									$$.caseStack = $1.caseStack;
+									$$.nextList = $1.nextList;
 									if($1.hasBreak){
 										$$.hasBreak = 1;
 										$$.lineno = $1.lineno;
@@ -233,6 +246,15 @@ caselist
 									//cout<<"caselist -> casestat"<<endl;
 								}
 	| casestat caselist			{
+									//handle caseStack
+									$2.caseStack->push_back((*$1.caseStack)[0]);
+									delete $1.caseStack;
+									$$.caseStack = $2.caseStack;
+									$2.nextList->push_back((*$1.nextList)[0]);
+									delete $1.nextList;
+									$$.nextList = $2.nextList;
+
+									//handle break for while
 									if($1.hasBreak){
 										$$.hasBreak = 1;
 										$$.lineno = $1.lineno;
@@ -245,16 +267,36 @@ caselist
 								}
 
 casestat
-	: CASE NUM COLON   MarkOn statement MarkOff BREAK SC 		{
-													$$.hasBreak = $5.hasBreak;
-													$$.lineno = $5.lineno;
-													//cout<<"casestat -> CASE NUM COLON statement BREAK SC"<<endl;
-												}
-	| CASE NUM B COLON MarkOn statement MarkOff BREAK SC 		{
-													$$.hasBreak = $6.hasBreak;
-													$$.lineno = $6.lineno;
-													//cout<<"casestat -> CASE NUM B COLON statement BREAK SC"<<endl;
-												}
+	: CASE NUM COLON   MarkOn M statement MarkOff BREAK N SC 		
+	{
+		$$.caseStack = new vector<pair<int,string> >;
+		$$.caseStack->push_back(make_pair(atoi($2.value),$5.nextInst));
+		$$.nextList = new vector<int>;
+		$$.nextList->push_back($9.asmLineNo);
+		
+		$$.hasBreak = $6.hasBreak;
+		$$.lineno = $6.lineno;
+
+		//cleanup:
+		free($2.value);
+		free($5.nextInst);
+		//cout<<"casestat -> CASE NUM COLON statement BREAK SC"<<endl;
+	}
+	| CASE NUM B COLON MarkOn M statement MarkOff BREAK N SC 
+	{
+		$$.caseStack = new vector<pair<int,string> >;
+		$$.caseStack->push_back(make_pair(atoi($2.value),$6.nextInst));
+		$$.nextList = new vector<int>;
+		$$.nextList->push_back($10.asmLineNo);
+
+		$$.hasBreak = $7.hasBreak;
+		$$.lineno = $7.lineno;
+
+		//cleanup:
+		free($2.value);
+		free($6.nextInst);
+		//cout<<"casestat -> CASE NUM B COLON statement BREAK SC"<<endl;
+	}
 
 simplestatement 
 	: type ID SC				{
@@ -340,6 +382,9 @@ simplestatement
 									}
 									$$.hasBreak =0;
 									//cout<<"simplestatement -> RETURN SC"<<endl;
+									int address = CodeBuffer::instance().emit("b ");
+									returnAdrressesBapatch.push_back(address) ; 
+
 								}
 	| RETURN exp SC				{
 									if( globalFunctionRetType != $2.type && 
@@ -351,7 +396,11 @@ simplestatement
 									}
 									
 									$$.hasBreak =0;
-									//cout<<"simplestatement -> RETURN exp SC"<<endl;
+									
+									CodeBuffer::instance().emit("move $v0 ,"+RegPool::regToString($2.place) );
+									regPool.freeReg($2.place);
+									int address = CodeBuffer::instance().emit("b ");
+									returnAdrressesBapatch.push_back(address) ; 
 								}
 	| BREAK SC 					{	
 									$$.hasBreak = true;
@@ -370,13 +419,17 @@ simplestatement
 	
 
 fundecl 
-	: fundecl_helper RPAREN LBRACE statements RBRACE 		{
+	: fundecl_helper RPAREN LBRACE statements M RBRACE 		{
 																if($4.hasBreak)
 																{
 																	errorUnexpectedBreak($4.lineno);
 																	exit(1);
 																}
-																symbolTable.removeScope();
+																CodeBuffer::instance().bpatch(returnAdrressesBapatch,$5.nextInst);
+																free($5.nextInst);
+																returnAdrressesBapatch.clear();
+																symbolTable.functionRemoveScope($1.typeListSize);
+																CodeBuffer::instance().emit("jr $ra");
 																//cout<<"fundecl -> rettype ID LPAREN formals RPAREN"<<endl;
 															}
 
@@ -384,6 +437,8 @@ fundecl_helper
 	: rettype ID LPAREN formals   	{
 										CodeBuffer::instance().emit(string($2.idName) + ":");
 										initFP();
+										setRaOnStack($4.typeListSize);
+										$$.typeListSize = $4.typeListSize;
 										try {
 											symbolTable.coverInsertFunction($2.idName,$4.typeList,$4.typeListSize,$1.type,$4.idList);
 										}
@@ -591,12 +646,16 @@ exp
 									//cout<<"exp -> NUM B"<<endl;
 								}
 	| call 						{
+									$$.place = regPool.getReg();
+									CodeBuffer::instance().emit("move "+ RegPool::regToString($$.place)+" , $v0");
 									$$.type = $1.type;
 									//cout<<"exp -> call"<<endl;
 								}
 
 call 
 	: ID LPAREN RPAREN 			{
+								symbolTable.functionCallCode();
+								CodeBuffer::instance().emit("jal "+ string($1.idName));
 								try {
 								$$.type=symbolTable.checkFuncTypeAndArgs($1.idName,NULL,0);
 								}
@@ -612,9 +671,16 @@ call
 								free($1.idName);
 								
 								$$.lineno = $1.lineno;
+
 									//cout<<"exp -> ID LPAREN RPAREN"<<endl;
 									}
 	| ID LPAREN explist RPAREN 	{
+
+
+								symbolTable.functionCallCode();
+								pushArgsList(*($3.argListRegs));
+								delete $3.argListRegs;
+								CodeBuffer::instance().emit("jal "+ string($1.idName));
 								try {
 								$$.type=symbolTable.checkFuncTypeAndArgs($1.idName,$3.typeList,$3.typeListSize);
 								}
@@ -638,6 +704,8 @@ explist
 								$$.typeList=(TYPE*)malloc(sizeof(TYPE));
 								$$.typeListSize=1;
 								$$.typeList[0]=$1.type;
+								$$.argListRegs = new vector<REG> (1,$1.place);
+
 								//cout<<"explist -> exp"<<endl;
 								}
 	| exp COMMA explist  		{
@@ -645,6 +713,8 @@ explist
 								$$.typeListSize=$3.typeListSize+1;
 								$$.typeList[$3.typeListSize]=$1.type;
 								//cout<<"explist -> exp COMMA explist"<<endl;
+								$$.argListRegs = $3.argListRegs;
+								$$.argListRegs->push_back($1.place);
 								}
 
 type 

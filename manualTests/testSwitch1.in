@@ -1,0 +1,18 @@
+void main(){
+	int x;
+	switch (5){
+		case 1: {
+			x = 1;
+		} break;
+		case 3b: 
+			x = 3;
+			break;
+		case 5:
+			x = 5;
+			break;
+		case 7:
+			x = 5/0;
+			break;
+	};
+	x = x*x;
+}

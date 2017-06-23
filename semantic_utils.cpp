@@ -86,7 +86,7 @@ void expMakeRelOp2(REG place1, REG place2 ,string op, vector<int>** trueList,vec
 void moveValueInVar (string varName, REG valPlace)
 {
 	int pos = symbolTable.getPosition(varName);
-	int offFromFP = pos*4;
+	int offFromFP = -pos*4;
 	std::ostringstream ostr;
 	ostr << offFromFP;
 	CodeBuffer::instance().emit("sw " + RegPool::regToString(valPlace) + ", " + ostr.str() +"($fp)");
@@ -96,7 +96,7 @@ void moveValueInVar (string varName, REG valPlace)
 REG loadValueFromVar (string varName)
 {
 	int pos = symbolTable.getPosition(varName);
-	int offFromFP = pos*4;
+	int offFromFP = -pos*4;
 	REG dest = regPool.getReg();
 	std::ostringstream ostr;
 	ostr << offFromFP;
@@ -132,7 +132,45 @@ REG putSetRegCode(vector<int>* trueList, vector<int>* falseList)
 	return valPlace;
 }
 
+void makeSwitchCode(REG expPlace, vector<pair<int,string> > caseStack, vector<int> nextList)
+{
+	REG caseReg = regPool.getReg();
+	for(vector<pair<int, string> >::reverse_iterator it = caseStack.rbegin(); it != caseStack.rend(); ++it)
+	{
+		std::ostringstream ostr;
+		ostr << it->first;
+		CodeBuffer::instance().emit("li " + RegPool::regToString(caseReg) + ", " + ostr.str());
+		CodeBuffer::instance().emit("beq " + RegPool::regToString(expPlace) + ", " +
+			RegPool::regToString(caseReg) + ", " + it->second); 
+	}
+	string nextLabel = CodeBuffer::instance().next();
+	CodeBuffer::instance().bpatch(nextList, nextLabel);
+	regPool.freeReg(caseReg);
+}
 
+void setRaOnStack(int argsSize)
+{
+	int offset = (argsSize)*4;
+	std::ostringstream ostr;
+	ostr << offset;
+	CodeBuffer::instance().emit("sw $ra , "+ ostr.str()+"($sp)");
+}
+void pushArgsList(vector<REG> argsList)
+{
+	int offset = argsList.size()*4;
+	std::ostringstream ostr;
+	ostr << offset;
+	CodeBuffer::instance().emit("subu $sp ,$sp , "+ostr.str() );
+
+	for(int i = 0;i < argsList.size();i++)
+	{
+		std::ostringstream ostr;
+		ostr <<i*4;
+		CodeBuffer::instance().emit("sw " +RegPool::regToString(argsList[argsList.size() - 1 -i]) +", " + ostr.str() +"($sp)" );
+		regPool.freeReg(argsList[argsList.size() - 1 -i]);
+	}
+
+}
 
 void insert_printi(){
 	CodeBuffer::instance().emit("printi:");
@@ -176,7 +214,7 @@ void whileStack::addAddress()
 {
 	std::ostringstream ostr;
 	ostr << symbolTable.numOfVarsUpToScopeNumber(_whileStack.back().first)*4 ;
-	CodeBuffer::instance().emit("addi $sp, $sp, " + ostr.str());
+	CodeBuffer::instance().emit("add $sp, $sp, " + ostr.str());
 	int address = CodeBuffer::instance().emit("b  ");
 	_whileStack.back().second.push_back(address);
 }

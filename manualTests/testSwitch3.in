@@ -1,0 +1,32 @@
+void main(){
+	int x;
+	switch (5){
+		case 1: {
+			x = 1;
+		} break;
+		case 3b: 
+			x = 3;
+			break;
+		case 5b:
+			{
+				x = 5;
+				switch (x) {
+					case 1:
+						x=1;
+						break;
+					case 5:
+						{
+							x=3;
+							int z=7;
+						}
+						break;
+				};
+				//int y = 6;
+			}
+			break;
+		case 7:
+			x = 5/0;
+			break;
+	};
+	x = x*x;
+}

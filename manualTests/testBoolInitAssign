@@ -1,0 +1,6 @@
+void main()
+{
+    bool c = false or 4 < 5 and 5==5 and true;
+    bool d = c;
+    c = d;
+}

@@ -13,6 +13,7 @@
 
 using std::vector;
 using std::string;
+using std::pair;
 using  namespace output;
 enum TYPE {INT_T, BOOL_T, BYTE_T, VOID_T, STRING_T};
 
@@ -34,7 +35,9 @@ struct newYystype
 	vector<int>* falseList;
 	char* nextInst;
 	int asmLineNo;
-	
+	vector<pair<int,string> >* caseStack;
+	vector<int>* nextList;
+	vector<REG>* argListRegs;
 };
 typedef struct newYystype  YYSTYPE;
 #define YYSTYPE_IS_DECLARED = 1
@@ -173,7 +176,9 @@ public:
 	~SymbolTable();
 	void coverInsertFunction(const string& name,TYPE* typeList,int paramNum, TYPE retType, char** paramNames);
 	void insertScope();
+	void functionCallCode();
 	void removeScope();
+	void functionRemoveScope(int argSize);
 	void insertVar(const string& name, TYPE type);
 	TYPE checkFuncTypeAndArgs(string, TYPE*,int);
 	//getPosition(name);

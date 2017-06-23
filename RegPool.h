@@ -3,6 +3,9 @@
 
 #include <map>
 #include <string>
+#include "bp.hpp"
+#include <sstream>
+
 using std::string;
 using std::map;
 
@@ -16,6 +19,8 @@ public:
 	RegPool();
 	REG getReg();
 	void freeReg(REG);
+	static void saveAll();
+	static void loadAll();
 };
 
 #endif
