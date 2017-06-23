@@ -386,22 +386,25 @@ simplestatement
 									returnAdrressesBapatch.push_back(address) ; 
 
 								}
-	| RETURN exp SC				{
-									if( globalFunctionRetType != $2.type && 
-									    !(globalFunctionRetType ==INT_T &&$2.type == BYTE_T )
-										|| globalFunctionRetType == VOID_T)
-									{
-										errorMismatch($1.lineno);
-										exit(1);
-									}
-									
-									$$.hasBreak =0;
-									
-									CodeBuffer::instance().emit("move $v0 ,"+RegPool::regToString($2.place) );
-									regPool.freeReg($2.place);
-									int address = CodeBuffer::instance().emit("b ");
-									returnAdrressesBapatch.push_back(address) ; 
-								}
+	| RETURN exp SC				
+	{
+		if( globalFunctionRetType != $2.type && 
+		    !(globalFunctionRetType ==INT_T &&$2.type == BYTE_T )
+			|| globalFunctionRetType == VOID_T)
+		{
+			errorMismatch($1.lineno);
+			exit(1);
+		}
+		
+		$$.hasBreak =0;
+		REG valPlace = $2.place;
+		if( BOOL_T == $2.type )
+			valPlace = putSetRegCode($2.trueList, $2.falseList);
+		CodeBuffer::instance().emit("move $v0 ,"+RegPool::regToString(valPlace));
+		regPool.freeReg($2.place);
+		int address = CodeBuffer::instance().emit("b ");
+		returnAdrressesBapatch.push_back(address) ; 
+	}
 	| BREAK SC 					{	
 									$$.hasBreak = true;
 									$$.lineno = $1.lineno;
@@ -645,12 +648,22 @@ exp
 									free($1.value);
 									//cout<<"exp -> NUM B"<<endl;
 								}
-	| call 						{
-									$$.place = regPool.getReg();
-									CodeBuffer::instance().emit("move "+ RegPool::regToString($$.place)+" , $v0");
-									$$.type = $1.type;
-									//cout<<"exp -> call"<<endl;
-								}
+	| call 						
+	{
+		$$.place = regPool.getReg();
+		CodeBuffer::instance().emit("move "+ RegPool::regToString($$.place) +
+			 " , $v0");
+		if($1.type == BOOL_T)
+		{	
+			REG tmpReg = regPool.getReg();
+			CodeBuffer::instance().emit("li " + RegPool::regToString(tmpReg) +
+				", 1");
+			expMakeRelOp2($$.place, tmpReg ,"==", 
+				&($$.trueList), &($$.falseList));
+		}
+		$$.type = $1.type;
+		//cout<<"exp -> call"<<endl;
+	}
 
 call 
 	: ID LPAREN RPAREN 			{
