@@ -70,7 +70,10 @@ void allocate_value();
 						yylval.lineno=yylineno;
 						return ID;
 					}
-\"([^\n\r\"\\]|\\[rnt"\\])+\" return STRING;
+\"([^\n\r\"\\]|\\[rnt"\\])+\" {
+								allocate_value();
+								return STRING;
+							}
 
 
 \/\/[^\r\n]*[\r|\n|\r\n]?         ;

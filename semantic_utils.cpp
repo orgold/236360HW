@@ -174,17 +174,31 @@ void pushArgsList(vector<REG> argsList)
 
 void insert_printi(){
 	CodeBuffer::instance().emit("printi:");
+	initFP();
+	setRaOnStack(1);
 	CodeBuffer::instance().emit("lw $a0,0($sp)");
-	 CodeBuffer::instance().emit("li $v0,1");
-	 CodeBuffer::instance().emit("syscall");
-	 CodeBuffer::instance().emit("jr $ra");
+	CodeBuffer::instance().emit("li $v0,1");
+	CodeBuffer::instance().emit("syscall");
+	CodeBuffer::instance().emit("addu $sp, $fp, 8");
+	CodeBuffer::instance().emit("lw $ra, 0($sp)");
+	CodeBuffer::instance().emit("lw $fp, 4($sp)");
+	CodeBuffer::instance().emit("addu $sp, $sp, 8" );
+	RegPool::loadAll();
+	CodeBuffer::instance().emit("jr $ra");
 }
 
 void insert_print(){
 	CodeBuffer::instance().emit("print:");
+	initFP();
+	setRaOnStack(1);
 	CodeBuffer::instance().emit("lw $a0,0($sp)");
 	CodeBuffer::instance().emit("li $v0,4");
 	CodeBuffer::instance().emit("syscall");
+	CodeBuffer::instance().emit("addu $sp, $fp, 8");
+	CodeBuffer::instance().emit("lw $ra, 0($sp)");
+	CodeBuffer::instance().emit("lw $fp, 4($sp)");
+	CodeBuffer::instance().emit("addu $sp, $sp, 8" );
+	RegPool::loadAll();
 	CodeBuffer::instance().emit("jr $ra");
 }
 

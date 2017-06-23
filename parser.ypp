@@ -15,6 +15,7 @@
 	bool globalIsDeclSensitive = 0;
 	vector<int> returnAdrressesBapatch(0);
 	extern int yylineno;
+	int stringCounter = 0 ;
 %}
 
 %locations
@@ -615,11 +616,23 @@ exp
 									expMakeRelOp2($1.place,$3.place,$2.value,&($$.trueList),&($$.falseList));
 									//cout<<"exp -> exp RELOP2 exp"<<endl;
 								}
-	| STRING 					{
-									$$.type = STRING_T;
-									$$.lineno = $1.lineno;
-									//cout<<"exp -> STRING"<<endl;
-								}
+	| STRING 					
+	{
+		std::ostringstream ostr;
+		ostr << "str_label_"<<stringCounter++;
+		CodeBuffer::instance().emitdata(ostr.str() + ": .asciiz " +
+		 	string($1.value));
+		free($1.value);
+		$$.place = regPool.getReg();
+		CodeBuffer::instance().emit("la " + RegPool::regToString($$.place) +
+			", " + ostr.str());
+
+		$$.type = STRING_T;
+		$$.lineno = $1.lineno;
+
+		//cout<<"exp -> STRING"<<endl;
+	}
+
 	| ID 						{
 								try{
 									$$.lineno = $1.lineno;

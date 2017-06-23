@@ -31,7 +31,6 @@ void SymbolTable::insertFunction(
 	insertScope();
 	for(int i = 0; i < paramTypes.size(); i++ ){
 		if (functionMap.find(paramNames[i]) != functionMap.end()){
-			std::cout<< paramNames[i] << "thrown for funcName" << std::endl;
 			throw errorDefException(paramNames[i]);
 		}
 		scopeStack.back().insertParam(
