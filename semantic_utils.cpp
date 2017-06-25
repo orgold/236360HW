@@ -95,6 +95,7 @@ void moveValueInVar (string varName, REG valPlace)
 
 REG loadValueFromVar (string varName)
 {
+	
 	int pos = symbolTable.getPosition(varName);
 	int offFromFP = -pos*4;
 	REG dest = regPool.getReg();

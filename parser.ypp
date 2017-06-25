@@ -338,13 +338,16 @@ simplestatement
 										exit(1);
 									}
 									moveValueInVar($2.idName, valPlace);
+									
+									
+									
+									$$.lineno = $2.lineno;
+									$$.hasBreak =0;
+									symbolTable.assignVar(string($2.idName));
+									free($2.idName);
 									//done
 									if(globalIsDeclSensitive)
 										symbolTable.removeScope();
-									
-									free($2.idName);
-									$$.lineno = $2.lineno;
-									$$.hasBreak =0;
 									//cout<<"simplestatement -> type ID ASSIGN exp SC"<<endl;
 								}
 	| ID ASSIGN exp SC 			{
@@ -365,9 +368,10 @@ simplestatement
 										errorUndef($1.lineno,$1.idName);
 										exit(1);
 									}
-									
+									symbolTable.assignVar(string($1.idName));
 									free($1.idName);
 									$$.hasBreak =0;
+
 									//cout<<"simplestatement -> ID ASSIGN exp SC"<<endl;
 								}
 	| call SC 					{
@@ -481,9 +485,18 @@ exp
 										$$.type = BYTE_T;
 									}
 									$$.place = expMakeBinOp1($1.place, $3.place, $2.value);
+
+									//oferflow
+									if($1.type == BYTE_T && $3.type == BYTE_T)
+										CodeBuffer::instance().emit("and "+RegPool::regToString($$.place) + ", " +
+										 RegPool::regToString($$.place)+ " ,0x000000ff  ");
+
+									
+
 									$$.lineno = $1.lineno;
 									//cout<<"exp -> exp BINOP1 exp"<<endl;
-								}
+									}
+								
 	| exp BINOP2 exp			{
 									if( $1.type != INT_T  &&
 										$1.type != BYTE_T ||
@@ -501,6 +514,10 @@ exp
 										$$.type = BYTE_T;
 									}
 									$$.place = expMakeBinOp2($1.place,$3.place,$2.value);
+									//oferflow
+									if($1.type == BYTE_T && $3.type == BYTE_T)
+										CodeBuffer::instance().emit("and "+RegPool::regToString($$.place) + ", " +
+										 RegPool::regToString($$.place)+ " ,0x000000ff  ");
 									$$.lineno = $1.lineno;
 									
 									//cout<<"exp -> exp BINOP2 exp: $$ type type is: " << toCString($$.type)<<endl;
@@ -658,8 +675,13 @@ exp
 									expMakeRelOp2($$.place, tmpReg ,"==", 
 										&($$.trueList), &($$.falseList));
 								}
+								if(!symbolTable.isInit(string($1.idName))){
+									cout<<"line "<<$1.lineno<<": use of uninitialized variable"<<endl;
+									exit(0);
+								}
 
 								//cout<<"exp -> ID: " << $1.idName << " of type: " << toCString($$.type) <<endl;
+								
 								free($1.idName);
 								}
 								

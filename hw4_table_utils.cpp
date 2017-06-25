@@ -64,6 +64,7 @@ void SymbolTable::removeScope()
 	std::ostringstream ostr;
 	ostr << sizeOfVarsOnStack;
 	CodeBuffer::instance().emit("addu $sp, $sp, " + ostr.str());
+	invalidAssign(getStackSize());
 	scopeStack.pop_back();
 }
 void SymbolTable::functionRemoveScope(int argSize)
@@ -154,7 +155,13 @@ TYPE SymbolTable::checkFuncTypeAndArgs(string id, TYPE* typeList,int size)
 
 SymbolTable::~SymbolTable()
 {}
-
+void SymbolTable::invalidAssign(int scopeNumber)
+{
+	for(std::vector<ScopeTable>::iterator sTable = scopeStack.begin() ; sTable!= scopeStack.end();sTable++)
+	{
+			 sTable->invalidAssign(scopeNumber);
+	}
+}
 void SymbolTable::removeGlobalScope()
 {	
 	//endScope();
@@ -201,6 +208,24 @@ size_t SymbolTable::numOfVarsUpToScopeNumber(size_t scopeNumber)
 	}
 
 	return numOfVars;
+}
+void SymbolTable::assignVar(string name)
+{
+	for(std::vector<ScopeTable>::iterator sTable = scopeStack.begin() ; sTable!= scopeStack.end();sTable++)
+	{
+		if(sTable->isVarInScope(name))
+			return sTable->assignVar(getStackSize(),name);
+	}
+
+}
+bool SymbolTable::isInit(string name)
+{
+		for(std::vector<ScopeTable>::iterator sTable = scopeStack.begin() ; sTable!= scopeStack.end();sTable++)
+	{
+		if(sTable->isVarInScope(name))
+			return  sTable->isInit(name);
+	}
+	return false;
 }
 
 /*

@@ -57,6 +57,12 @@ public:
 	errorUndefException(){};
 };
 
+class errorUnInitilizeVar  
+{
+public:
+	errorUnInitilizeVar(){};
+};
+
 class errorUndefFuncException  
 {
 public:
@@ -88,6 +94,7 @@ struct VarEntryData
 {
 	TYPE type;
 	int position;
+	int initScope;
 };
 
 class ScopeTable
@@ -107,7 +114,7 @@ public:
 	void insertVar(const string& name, TYPE type)
 	{
 		orderIdsByArrival.push_back(name);
-		VarEntryData data = {type, currentOffset++};
+		VarEntryData data = {type, currentOffset++,-1};
 		nameToData[name] = data;
 	}
 	void insertParam(const string& name, TYPE type, int position)
@@ -115,7 +122,7 @@ public:
 		if(nameToData.find(name) != nameToData.end())
 			throw errorDefException(name);
 		orderIdsByArrival.push_back(name);
-		VarEntryData data = {type, position};///d
+		VarEntryData data = {type, position,0};//d
 		nameToData[name] = data;
 	}
 	int getCurrentOffset()
@@ -130,6 +137,29 @@ public:
 	TYPE getType (string name)
 	{
 		return nameToData[name].type;
+	}
+	void assignVar(int scopeNumber,string name)
+	{
+		VarEntryData dataNew = nameToData[name];
+		if(dataNew.initScope == -1)
+			dataNew.initScope = scopeNumber;
+		nameToData[name] = dataNew;
+	}
+	void invalidAssign(int scopeNumber)
+	{
+		for( std::map<string,VarEntryData>::iterator itr = nameToData.begin(); itr != nameToData.end(); itr++){
+			VarEntryData dataNew = itr->second;
+			if(dataNew.initScope == scopeNumber) {
+				dataNew.initScope = -1;
+				nameToData[itr->first] = dataNew;
+			}
+		}
+	}
+	bool isInit(string name)
+	{
+		VarEntryData dataNew = nameToData[name];
+		return -1 != dataNew.initScope;
+
 	}
 	int getPosition(string name) { return nameToData[name].position; }
 #ifdef DEBUG
@@ -171,6 +201,7 @@ class SymbolTable
 	void checkNameNotDefinedAsVar(const string& name);
 	void checkNameNotDefinedAsFunction(const string& name);
 	void insertFunction(const string& name,const vector<TYPE>& paramList,TYPE retType,const vector<string>& paramNames);
+	void invalidAssign(int scopeNumber);
 public:
 	SymbolTable();
 	~SymbolTable();
@@ -187,6 +218,9 @@ public:
 	int getPosition(string name);
 	size_t getStackSize();
 	size_t numOfVarsUpToScopeNumber(size_t scopeNumber);
+	void assignVar(string name);
+	bool isInit(string name);
+
 #ifdef DEBUG
 	void print()
 	{
