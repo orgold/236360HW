@@ -12,8 +12,7 @@
 	RegPool regPool;
 	whileStack while_stack;
 	TYPE globalFunctionRetType;
-	bool globalIsDeclSensitive = 0;
-	vector<int> returnAdrressesBapatch(0);
+	bool globalIsDeclSensitive = 0; vector<int> returnAdrressesBapatch(0);
 	extern int yylineno;
 	int stringCounter = 0 ;
 %}
@@ -433,6 +432,11 @@ fundecl
 																free($5.nextInst);
 																returnAdrressesBapatch.clear();
 																symbolTable.functionRemoveScope($1.typeListSize);
+																if("main" == string($1.idName))
+																{
+																	CodeBuffer::instance().emit("li $v0 , 10");
+																	CodeBuffer::instance().emit("syscall");
+																}else 
 																CodeBuffer::instance().emit("jr $ra");
 																//cout<<"fundecl -> rettype ID LPAREN formals RPAREN"<<endl;
 															}
@@ -453,7 +457,7 @@ fundecl_helper
 										}
 										globalFunctionRetType = $1.type;
 										$$.type=$1.type;
-										free($2.idName);
+										$$.idName = $2.idName;
 										free($4.typeList);
 										for(int i = 0; i < $4.typeListSize ; i++)
 											free($4.idList[i]);
@@ -620,7 +624,7 @@ exp
 	{
 		std::ostringstream ostr;
 		ostr << "str_label_"<<stringCounter++;
-		CodeBuffer::instance().emitdata(ostr.str() + ": .asciiz " +
+		CodeBuffer::instance().emitData(ostr.str() + ": .asciiz " +
 		 	string($1.value));
 		free($1.value);
 		$$.place = regPool.getReg();
@@ -643,9 +647,18 @@ exp
 									errorUndef($$.lineno,e.id.c_str()); 
 									exit(1);
 								}
-								$$.place = loadValueFromVar($1.idName);
 								$$.trueList = NULL;
 								$$.falseList = NULL;
+								$$.place = loadValueFromVar($1.idName);
+								if($$.type == BOOL_T)
+								{	
+									REG tmpReg = regPool.getReg();
+									CodeBuffer::instance().emit("li " + RegPool::regToString(tmpReg) +
+										", 1");
+									expMakeRelOp2($$.place, tmpReg ,"==", 
+										&($$.trueList), &($$.falseList));
+								}
+
 								//cout<<"exp -> ID: " << $1.idName << " of type: " << toCString($$.type) <<endl;
 								free($1.idName);
 								}
@@ -727,6 +740,9 @@ call
 
 explist 
 	: exp 						{
+								if($1.type == BOOL_T && NULL != $1.trueList)
+										$1.place = putSetRegCode($1.trueList,$1.falseList);
+
 								$$.typeList=(TYPE*)malloc(sizeof(TYPE));
 								$$.typeListSize=1;
 								$$.typeList[0]=$1.type;
@@ -735,6 +751,8 @@ explist
 								//cout<<"explist -> exp"<<endl;
 								}
 	| exp COMMA explist  		{
+								if($1.type == BOOL_T && NULL != $1.trueList)
+										$1.place = putSetRegCode($1.trueList,$1.falseList);
 								$$.typeList =(TYPE*) realloc($3.typeList,sizeof(TYPE)*($3.typeListSize+1));
 								$$.typeListSize=$3.typeListSize+1;
 								$$.typeList[$3.typeListSize]=$1.type;

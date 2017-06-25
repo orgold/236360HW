@@ -10,7 +10,7 @@ void allocate_value();
 
 %option yylineno
 %option noyywrap
-
+%pointer
 
 %%					
 "true" 				return handle_default();
@@ -141,9 +141,8 @@ int handle_default()
 		return RBRACE;
 }
 
-
 void allocate_value()
 {
-	yylval.value=(char*)malloc(strlen(yytext));
+	yylval.value=(char*)malloc(strlen(yytext)+1);
 	strcpy(yylval.value,yytext);
 }
