@@ -1,5 +1,7 @@
 #include "RegPool.h"
 #include <assert.h>
+//#include "bp.hpp" //TODO REMOVE
+//#include <sstream>//TODO REMOVE
 
 RegPool::RegPool()
 {
@@ -14,6 +16,9 @@ RegPool::RegPool()
 		if(false == ite->second)
 		{
 			pool[ite->first]= true;
+			//std::ostringstream ostr;//TODO REMOVE
+			//ostr << "*********************allcating reg " << (int)ite->first << "****************";//TODO REMOVE
+			//CodeBuffer::instance().emit(ostr.str());//TODO REMOVE
 			return ite->first;
 		}
 	}
@@ -24,6 +29,9 @@ RegPool::RegPool()
 void RegPool::freeReg(REG regKey)
 {
 	pool[regKey] = false;
+	//std::ostringstream ostr;//TODO REMOVE
+	//ostr << "*********************freeing reg " << (int)regKey << "****************";//TODO REMOVE
+	//CodeBuffer::instance().emit(ostr.str());//TODO REMOVE
 }
 
 string  RegPool::regToString(REG reg)

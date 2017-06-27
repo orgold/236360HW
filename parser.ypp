@@ -206,19 +206,20 @@ closedstatement
 			}
 			//cout<<"closedstatement -> IF LPAREN exp RPAREN closedstatement ELSE closedstatement"<<endl;
 		}
-	| WhileStart RPAREN MarkOn M closedstatement MarkOff N M	{
-																	CodeBuffer::instance().bpatch(*($1.trueList),$4.nextInst);
-																	delete $1.trueList;
-																	free($4.nextInst);
-																	CodeBuffer::instance().bpatch(*($1.falseList),$8.nextInst);
-																	delete $1.falseList;
-																	while_stack.removeVector($8.nextInst);
-																	CodeBuffer::instance().bpatch(CodeBuffer::makelist($7.asmLineNo),$1.nextInst);
-																	free($1.nextInst);
-																	free($8.nextInst);
-																	$$.hasBreak = 0;
-																	//cout<<"closedstatement -> WHILE LPAREN exp RPAREN closedstatement"<<endl;
-																}
+	| WhileStart RPAREN MarkOn M closedstatement MarkOff N M	
+	{
+		CodeBuffer::instance().bpatch(*($1.trueList),$4.nextInst);
+		delete $1.trueList;
+		free($4.nextInst);
+		CodeBuffer::instance().bpatch(*($1.falseList),$8.nextInst);
+		delete $1.falseList;
+		while_stack.removeVector($8.nextInst);
+		CodeBuffer::instance().bpatch(CodeBuffer::makelist($7.asmLineNo),$1.nextInst);
+		free($1.nextInst);
+		free($8.nextInst);
+		$$.hasBreak = 0;
+		//cout<<"closedstatement -> WHILE LPAREN exp RPAREN closedstatement"<<endl;
+	}
 	| SWITCH LPAREN exp {if($3.type != BYTE_T && $3.type != INT_T){errorMismatch($1.lineno);exit(1);}} N RPAREN LBRACE caselist RBRACE M SC		
 	{
 		CodeBuffer::instance().bpatch(CodeBuffer::makelist($5.asmLineNo),$10.nextInst);
@@ -405,7 +406,7 @@ simplestatement
 		if( BOOL_T == $2.type )
 			valPlace = putSetRegCode($2.trueList, $2.falseList);
 		CodeBuffer::instance().emit("move $v0 ,"+RegPool::regToString(valPlace));
-		regPool.freeReg($2.place);
+		regPool.freeReg(valPlace);
 		int address = CodeBuffer::instance().emit("b ");
 		returnAdrressesBapatch.push_back(address) ; 
 	}
