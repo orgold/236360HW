@@ -65,7 +65,7 @@ void allocate_value();
 						return RELOP1;
 					}
 [a-zA-Z][a-zA-Z0-9]* {
-						yylval.idName=(char*)malloc(strlen(yytext));
+						yylval.idName=(char*)malloc(strlen(yytext)+1);
 						strcpy(yylval.idName,yytext);
 						yylval.lineno=yylineno;
 						return ID;

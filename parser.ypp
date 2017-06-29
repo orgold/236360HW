@@ -710,6 +710,8 @@ exp
 			expMakeRelOp2($$.place, tmpReg ,"==", 
 				&($$.trueList), &($$.falseList));
 		}
+		if(!$$.trueList || !$$.falseList)
+			cout << "error on makeRelOp2" << endl; 
 		$$.type = $1.type;
 		//cout<<"exp -> call"<<endl;
 	}
@@ -773,16 +775,17 @@ explist
 
 								//cout<<"explist -> exp"<<endl;
 								}
-	| exp COMMA explist  		{
-								if($1.type == BOOL_T && NULL != $1.trueList)
-										$1.place = putSetRegCode($1.trueList,$1.falseList);
-								$$.typeList =(TYPE*) realloc($3.typeList,sizeof(TYPE)*($3.typeListSize+1));
-								$$.typeListSize=$3.typeListSize+1;
-								$$.typeList[$3.typeListSize]=$1.type;
+	| exp
+	{if($1.type == BOOL_T && NULL != $1.trueList)
+		$1.place = putSetRegCode($1.trueList,$1.falseList);/*marker*/}
+	 COMMA explist  		{
+								$$.typeList =(TYPE*) realloc($4.typeList,sizeof(TYPE)*($4.typeListSize+1));
+								$$.typeListSize=$4.typeListSize+1;
+								$$.typeList[$4.typeListSize]=$1.type;
 								//cout<<"explist -> exp COMMA explist"<<endl;
-								$$.argListRegs = $3.argListRegs;
+								$$.argListRegs = $4.argListRegs;
 								$$.argListRegs->push_back($1.place);
-								}
+							}
 
 type 
 	: INT 						{
