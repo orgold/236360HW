@@ -107,6 +107,7 @@ IfStart: IF LPAREN exp 			{
 									}
 									$$.trueList = $3.trueList;
 									$$.falseList = $3.falseList;
+									symbolTable.addScopeOnControlFlow();
 								}
 
 WhileStart : WHILE M LPAREN exp {
@@ -121,34 +122,48 @@ WhileStart : WHILE M LPAREN exp {
 									$$.trueList = $4.trueList;
 									$$.falseList = $4.falseList;
 									$$.nextInst = $2.nextInst;
+									symbolTable.addScopeOnControlFlow();
 								}
 
 openstatement
-	: IfStart RPAREN MarkOn M statement MarkOff			{
+	: IfStart RPAREN MarkOn M statement MarkOff			
+	{
 																
-															CodeBuffer::instance().bpatch(*($1.trueList),$4.nextInst);
-															delete $1.trueList;
-															free($4.nextInst);
-															string nextLabel = CodeBuffer::instance().next();
-															CodeBuffer::instance().bpatch(*($1.falseList),nextLabel);
-															delete $1.falseList;
-															$$.hasBreak = $5.hasBreak;
-															$$.lineno = $5.lineno;
-															//cout<<"openstatement -> IF LPAREN exp RPAREN statement"<<endl;
-														}
+		CodeBuffer::instance().bpatch(*($1.trueList),$4.nextInst);
+		delete $1.trueList;
+		free($4.nextInst);
+		string nextLabel = CodeBuffer::instance().next();
+		CodeBuffer::instance().bpatch(*($1.falseList),nextLabel);
+		delete $1.falseList;
+		$$.hasBreak = $5.hasBreak;
+		$$.lineno = $5.lineno;
+		symbolTable.remScopeOnControlFlow();
+		//cout<<"openstatement -> IF LPAREN exp RPAREN statement"<<endl;
+	}
 
-	| IfStart RPAREN MarkOn M closedstatement MarkOff ELSE MarkOn N M  openstatement MarkOff	
+	| IfStart RPAREN MarkOn M closedstatement CFOFF CFON MarkOff ELSE MarkOn N M  openstatement MarkOff	
 		{
-			
 			CodeBuffer::instance().bpatch(*($1.trueList),$4.nextInst);
 			delete $1.trueList;
 			free($4.nextInst);
-			CodeBuffer::instance().bpatch(*($1.falseList),$9.nextInst);
+			CodeBuffer::instance().bpatch(*($1.falseList),$12.nextInst);
 			delete $1.falseList;
-			free($9.nextInst);
+			free($12.nextInst);
 
 			string nextLabel = CodeBuffer::instance().next();
-			CodeBuffer::instance().bpatch(CodeBuffer::makelist($8.asmLineNo),nextLabel);
+			CodeBuffer::instance().bpatch(CodeBuffer::makelist($11.asmLineNo),nextLabel);
+			vector<string> initInIf = *($6.initializedVars);
+			vector<string> initInElse = symbolTable.remScopeOnControlFlow();
+
+			sort(initInIf.begin(), initInIf.end());
+			sort(initInElse.begin(), initInElse.end());
+			vector<string> buffer(initInIf.size());
+			std::vector<string>::iterator it = set_intersection(initInIf.begin(), initInIf.end(),
+				initInElse.begin(), initInElse.end(),buffer.begin());
+			buffer.resize(it - buffer.begin());
+			symbolTable.changeInitScope(true, buffer);
+
+			delete $6.initializedVars;
 
 			if($5.hasBreak)
 				{
@@ -157,8 +172,8 @@ openstatement
 				}
 				else 
 				{
-					$$.hasBreak=$11.hasBreak;
-					$$.lineno = $11.lineno;
+					$$.hasBreak=$13.hasBreak;
+					$$.lineno = $13.lineno;
 				}
 			//cout<<"openstatement -> IF LPAREN exp RPAREN closedstatement ELSE openstatement"<<endl;
 		}
@@ -172,6 +187,7 @@ openstatement
 																	delete $1.falseList;
 																	while_stack.removeVector($8.nextInst);
 																	CodeBuffer::instance().bpatch(CodeBuffer::makelist($7.asmLineNo),$1.nextInst);
+																	symbolTable.remScopeOnControlFlow();
 																	free($1.nextInst);
 																	free($8.nextInst);
 																	//cout<<"openstatement -> WHILE LPAREN exp RPAREN openstatement"<<endl;
@@ -183,17 +199,28 @@ closedstatement
 																	$$.lineno = $1.lineno;
 																	//cout<<"closedstatement -> simplestatement"<<endl;
 																}
-	| IfStart RPAREN MarkOn M closedstatement MarkOff ELSE MarkOn N M closedstatement MarkOff
+	| IfStart RPAREN MarkOn M closedstatement CFOFF CFON MarkOff ELSE MarkOn N M closedstatement MarkOff
 		{
 			CodeBuffer::instance().bpatch(*($1.trueList),$4.nextInst);
 			delete $1.trueList;
 			free($4.nextInst);
-			CodeBuffer::instance().bpatch(*($1.falseList),$10.nextInst);
+			CodeBuffer::instance().bpatch(*($1.falseList),$12.nextInst);
 			delete $1.falseList;
-			free($10.nextInst);
+			free($12.nextInst);
 			string nextLabel = CodeBuffer::instance().next();
-			CodeBuffer::instance().bpatch(CodeBuffer::makelist($9.asmLineNo),nextLabel);
+			CodeBuffer::instance().bpatch(CodeBuffer::makelist($11.asmLineNo),nextLabel);
+			vector<string> initInIf = *($6.initializedVars);
+			vector<string> initInElse = symbolTable.remScopeOnControlFlow();
 
+			sort(initInIf.begin(), initInIf.end());
+			sort(initInElse.begin(), initInElse.end());
+			vector<string> buffer(initInIf.size());
+			std::vector<string>::iterator it = set_intersection(initInIf.begin(), initInIf.end(),
+				initInElse.begin(), initInElse.end(),buffer.begin());
+			buffer.resize(it - buffer.begin());
+			symbolTable.changeInitScope(true, buffer);
+
+			delete $6.initializedVars;
 			if($5.hasBreak)
 			{
 				$$.hasBreak=1;
@@ -201,8 +228,8 @@ closedstatement
 			}
 			else 
 			{
-				$$.hasBreak=$11.hasBreak;
-				$$.lineno = $11.lineno;
+				$$.hasBreak=$13.hasBreak;
+				$$.lineno = $13.lineno;
 			}
 			//cout<<"closedstatement -> IF LPAREN exp RPAREN closedstatement ELSE closedstatement"<<endl;
 		}
@@ -215,6 +242,7 @@ closedstatement
 		delete $1.falseList;
 		while_stack.removeVector($8.nextInst);
 		CodeBuffer::instance().bpatch(CodeBuffer::makelist($7.asmLineNo),$1.nextInst);
+		symbolTable.remScopeOnControlFlow();
 		free($1.nextInst);
 		free($8.nextInst);
 		$$.hasBreak = 0;
@@ -268,34 +296,33 @@ caselist
 								}
 
 casestat
-	: CASE NUM COLON   MarkOn M statement MarkOff BREAK N SC 		
+	: CASE CFON NUM COLON   MarkOn M statement MarkOff BREAK N SC 		
 	{
 		$$.caseStack = new vector<pair<int,string> >;
-		$$.caseStack->push_back(make_pair(atoi($2.value),$5.nextInst));
-		$$.nextList = new vector<int>;
-		$$.nextList->push_back($9.asmLineNo);
-		
-		$$.hasBreak = $6.hasBreak;
-		$$.lineno = $6.lineno;
-
-		//cleanup:
-		free($2.value);
-		free($5.nextInst);
-		//cout<<"casestat -> CASE NUM COLON statement BREAK SC"<<endl;
-	}
-	| CASE NUM B COLON MarkOn M statement MarkOff BREAK N SC 
-	{
-		$$.caseStack = new vector<pair<int,string> >;
-		$$.caseStack->push_back(make_pair(atoi($2.value),$6.nextInst));
+		$$.caseStack->push_back(make_pair(atoi($3.value),$6.nextInst));
 		$$.nextList = new vector<int>;
 		$$.nextList->push_back($10.asmLineNo);
-
+		
 		$$.hasBreak = $7.hasBreak;
 		$$.lineno = $7.lineno;
+		symbolTable.remScopeOnControlFlow();
 
 		//cleanup:
-		free($2.value);
-		free($6.nextInst);
+		free($3.value);;
+		//cout<<"casestat -> CASE NUM COLON statement BREAK SC"<<endl;
+	}
+	| CASE CFON NUM B COLON MarkOn M statement MarkOff BREAK N SC 
+	{
+		$$.caseStack = new vector<pair<int,string> >;
+		$$.caseStack->push_back(make_pair(atoi($3.value),$7.nextInst));
+		$$.nextList = new vector<int>;
+		$$.nextList->push_back($11.asmLineNo);
+
+		$$.hasBreak = $8.hasBreak;
+		$$.lineno = $8.lineno;
+		symbolTable.remScopeOnControlFlow();
+		//cleanup:
+		free($3.value);
 		//cout<<"casestat -> CASE NUM B COLON statement BREAK SC"<<endl;
 	}
 
@@ -339,12 +366,13 @@ simplestatement
 										exit(1);
 									}
 									moveValueInVar($2.idName, valPlace);
-									
+									vector<string> oneName;
+									oneName.push_back($2.idName);
+									symbolTable.changeInitScope(true,oneName);
 									
 									
 									$$.lineno = $2.lineno;
 									$$.hasBreak =0;
-									symbolTable.assignVar(string($2.idName));
 									free($2.idName);
 									//done
 									if(globalIsDeclSensitive)
@@ -369,10 +397,14 @@ simplestatement
 										errorUndef($1.lineno,$1.idName);
 										exit(1);
 									}
-									symbolTable.assignVar(string($1.idName));
-									free($1.idName);
+									
 									$$.hasBreak =0;
+									vector<string> oneName;
+									oneName.push_back($1.idName);
+									symbolTable.changeInitScope(true,oneName);
 
+
+									free($1.idName);
 									//cout<<"simplestatement -> ID ASSIGN exp SC"<<endl;
 								}
 	| call SC 					{
@@ -851,7 +883,11 @@ M:							{
 							}
 N:							{
 							$$.asmLineNo =  CodeBuffer::instance().emit("b ");
-							}								
+							}
+CFON:						{	symbolTable.addScopeOnControlFlow();}
+CFOFF:						{$$.initializedVars = new vector<string>(symbolTable.remScopeOnControlFlow());}
+
+
 %%
 
 int main()

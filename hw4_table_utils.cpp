@@ -64,7 +64,6 @@ void SymbolTable::removeScope()
 	std::ostringstream ostr;
 	ostr << sizeOfVarsOnStack;
 	CodeBuffer::instance().emit("addu $sp, $sp, " + ostr.str());
-	invalidAssign(getStackSize());
 	scopeStack.pop_back();
 }
 void SymbolTable::functionRemoveScope(int argSize)
@@ -155,13 +154,7 @@ TYPE SymbolTable::checkFuncTypeAndArgs(string id, TYPE* typeList,int size)
 
 SymbolTable::~SymbolTable()
 {}
-void SymbolTable::invalidAssign(int scopeNumber)
-{
-	for(std::vector<ScopeTable>::iterator sTable = scopeStack.begin() ; sTable!= scopeStack.end();sTable++)
-	{
-			 sTable->invalidAssign(scopeNumber);
-	}
-}
+
 void SymbolTable::removeGlobalScope()
 {	
 	//endScope();
@@ -209,23 +202,47 @@ size_t SymbolTable::numOfVarsUpToScopeNumber(size_t scopeNumber)
 
 	return numOfVars;
 }
-void SymbolTable::assignVar(string name)
-{
-	for(std::vector<ScopeTable>::iterator sTable = scopeStack.begin() ; sTable!= scopeStack.end();sTable++)
-	{
-		if(sTable->isVarInScope(name))
-			return sTable->assignVar(getStackSize(),name);
-	}
 
-}
 bool SymbolTable::isInit(string name)
 {
-		for(std::vector<ScopeTable>::iterator sTable = scopeStack.begin() ; sTable!= scopeStack.end();sTable++)
+	for(std::vector<ScopeTable>::iterator sTable = scopeStack.begin() ; sTable!= scopeStack.end();sTable++)
 	{
 		if(sTable->isVarInScope(name))
 			return  sTable->isInit(name);
 	}
 	return false;
+}
+
+void SymbolTable::addScopeOnControlFlow()
+{
+	for(std::vector<ScopeTable>::iterator sTable = scopeStack.begin() ; sTable!= scopeStack.end();sTable++)
+		sTable->addScopeOnControlFlow();
+}
+vector<string> SymbolTable::remScopeOnControlFlow()
+{
+	vector<string> allInitVars;
+	for(std::vector<ScopeTable>::iterator sTable = scopeStack.begin() ; sTable!= scopeStack.end();sTable++){
+		vector<string> tmp = sTable->remScopeOnControlFlow();
+		sort(tmp.begin(),tmp.end());
+		sort(allInitVars.begin(), allInitVars.end());
+		vector<string> buffer = vector<string>(tmp.size()+allInitVars.size());
+		std::vector<string>::iterator it = std::set_union(allInitVars.begin(),allInitVars.end(),
+			tmp.begin(), tmp.end(),buffer.begin());
+		buffer.resize(it - buffer.begin());
+		allInitVars = buffer;
+	}
+	return allInitVars;
+}
+void SymbolTable::changeInitScope(bool newVal, vector<string> initializedVars)
+{
+	for(std::vector<string>::iterator nameItr = initializedVars.begin(); nameItr != initializedVars.end(); nameItr++ )
+	{
+		for(std::vector<ScopeTable>::iterator sTable = scopeStack.begin() ; sTable!= scopeStack.end();sTable++)
+		{
+			if(sTable->isVarInScope(*nameItr))
+				sTable->changeInitScope(newVal, *nameItr);
+		}
+	}	
 }
 
 /*

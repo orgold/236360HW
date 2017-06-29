@@ -4,15 +4,18 @@
 #include <iostream>
 #include "output.hpp"
 #include <map>
+#include <set>
 #include <exception>
 #include <assert.h>
 #include <algorithm>
 #include "RegPool.h"
 #include "bp.hpp"
+#include <algorithm>
 
 
 using std::vector;
 using std::string;
+using std::set;
 using std::pair;
 using  namespace output;
 enum TYPE {INT_T, BOOL_T, BYTE_T, VOID_T, STRING_T};
@@ -38,6 +41,7 @@ struct newYystype
 	vector<pair<int,string> >* caseStack;
 	vector<int>* nextList;
 	vector<REG>* argListRegs;
+	vector<string>* initializedVars;
 };
 typedef struct newYystype  YYSTYPE;
 #define YYSTYPE_IS_DECLARED = 1
@@ -94,7 +98,7 @@ struct VarEntryData
 {
 	TYPE type;
 	int position;
-	int initScope;
+	vector<bool> initInScope;
 };
 
 class ScopeTable
@@ -114,7 +118,8 @@ public:
 	void insertVar(const string& name, TYPE type)
 	{
 		orderIdsByArrival.push_back(name);
-		VarEntryData data = {type, currentOffset++,-1};
+		VarEntryData data = {type, currentOffset++};
+		data.initInScope = vector<bool>(1,false);
 		nameToData[name] = data;
 	}
 	void insertParam(const string& name, TYPE type, int position)
@@ -122,7 +127,8 @@ public:
 		if(nameToData.find(name) != nameToData.end())
 			throw errorDefException(name);
 		orderIdsByArrival.push_back(name);
-		VarEntryData data = {type, position,0};//d
+		VarEntryData data = {type, position};
+		data.initInScope = vector<bool>(1,true);
 		nameToData[name] = data;
 	}
 	int getCurrentOffset()
@@ -138,30 +144,45 @@ public:
 	{
 		return nameToData[name].type;
 	}
-	void assignVar(int scopeNumber,string name)
-	{
-		VarEntryData dataNew = nameToData[name];
-		if(dataNew.initScope == -1)
-			dataNew.initScope = scopeNumber;
-		nameToData[name] = dataNew;
-	}
-	void invalidAssign(int scopeNumber)
-	{
-		for( std::map<string,VarEntryData>::iterator itr = nameToData.begin(); itr != nameToData.end(); itr++){
-			VarEntryData dataNew = itr->second;
-			if(dataNew.initScope == scopeNumber) {
-				dataNew.initScope = -1;
-				nameToData[itr->first] = dataNew;
-			}
-		}
-	}
+	int getPosition(string name) { return nameToData[name].position; }
+
+	//bonus2
 	bool isInit(string name)
 	{
-		VarEntryData dataNew = nameToData[name];
-		return -1 != dataNew.initScope;
-
+		VarEntryData& dataNew = nameToData[name];
+		return dataNew.initInScope.back();
 	}
-	int getPosition(string name) { return nameToData[name].position; }
+	void addScopeOnControlFlow()
+	{
+		for( std::map<string,VarEntryData>::iterator itr = nameToData.begin(); itr != nameToData.end(); itr++){
+			VarEntryData& dataNew = itr->second;
+			bool tmp = dataNew.initInScope.back();
+			dataNew.initInScope.push_back(tmp);
+			nameToData[itr->first] = dataNew;
+		}
+	}
+
+	vector<string> remScopeOnControlFlow()
+	{
+		vector<string> initVars;
+		for( std::map<string,VarEntryData>::iterator itr = nameToData.begin(); itr != nameToData.end(); itr++){
+			VarEntryData& dataNew = itr->second;
+			if(dataNew.initInScope.back())
+				initVars.push_back(itr->first);
+			dataNew.initInScope.pop_back();
+			nameToData[itr->first] = dataNew;
+		}
+		return initVars;
+	}
+	
+	void changeInitScope(bool newVal, string name)
+	{
+		VarEntryData& dataNew = nameToData[name];
+		dataNew.initInScope.back() = newVal;
+		nameToData[name] = dataNew;
+	}
+
+	//end bonus2
 #ifdef DEBUG
 	void print()
 	{
@@ -201,7 +222,6 @@ class SymbolTable
 	void checkNameNotDefinedAsVar(const string& name);
 	void checkNameNotDefinedAsFunction(const string& name);
 	void insertFunction(const string& name,const vector<TYPE>& paramList,TYPE retType,const vector<string>& paramNames);
-	void invalidAssign(int scopeNumber);
 public:
 	SymbolTable();
 	~SymbolTable();
@@ -218,9 +238,12 @@ public:
 	int getPosition(string name);
 	size_t getStackSize();
 	size_t numOfVarsUpToScopeNumber(size_t scopeNumber);
-	void assignVar(string name);
 	bool isInit(string name);
-
+	//bonus 2
+	void addScopeOnControlFlow();
+	vector<string> remScopeOnControlFlow();
+	void changeInitScope(bool newVal, vector<string> initializedVars);
+	//end bonus 2
 #ifdef DEBUG
 	void print()
 	{
