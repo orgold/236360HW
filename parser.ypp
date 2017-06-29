@@ -710,8 +710,6 @@ exp
 			expMakeRelOp2($$.place, tmpReg ,"==", 
 				&($$.trueList), &($$.falseList));
 		}
-		if(!$$.trueList || !$$.falseList)
-			cout << "error on makeRelOp2" << endl; 
 		$$.type = $1.type;
 		//cout<<"exp -> call"<<endl;
 	}
